@@ -1,0 +1,122 @@
+{
+  "name": "DaVinci Resolve",
+  "author": "Upool",
+  "description": "An AI Made DaVinci Resolve Profile",
+  "category": "productivity",
+  "tags": [
+    "DaVinci Resolve"
+  ],
+  "type": "profile",
+  "profile": {
+    "macros": {
+      "Play/Pause": {
+        "name": "Play/Pause",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "Space"
+          }
+        ]
+      },
+      "Blade Tool": {
+        "name": "Blade Tool",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "b"
+          }
+        ]
+      },
+      "Split Clip": {
+        "name": "Split Clip",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key_down",
+            "value": "Ctrl"
+          },
+          {
+            "type": "key",
+            "value": "\\"
+          }
+        ]
+      },
+      "Add Marker": {
+        "name": "Add Marker",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "m"
+          }
+        ]
+      },
+      "Next Edit": {
+        "name": "Next Edit",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "Down"
+          }
+        ]
+      },
+      "Previous Edit": {
+        "name": "Previous Edit",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "Up"
+          }
+        ]
+      },
+      "Ripple Delete": {
+        "name": "Ripple Delete",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "delete"
+          }
+        ]
+      },
+      "Frame Forward": {
+        "name": "Frame Forward",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "Right"
+          }
+        ]
+      },
+      "Frame Backward": {
+        "name": "Frame Backward",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "Left"
+          }
+        ]
+      }
+    },
+    "keys": {
+      "0": "Blade Tool",
+      "1": "Play/Pause",
+      "2": "Previous Edit",
+      "3": "Split Clip",
+      "4": "Next Edit",
+      "5": "Add Marker",
+      "6": "Ripple Delete"
+    },
+    "knobs": {
+      "knob_rotate_left": "Frame Backward",
+      "knob_rotate_right": "Frame Forward"
+    },
+    "knob_mode": "Timeline Scrubber"
+  }
+}
