@@ -1,0 +1,15 @@
+{
+  "name": "CMD",
+  "author": "Upool",
+  "description": "Opens Command Prompt",
+  "category": "productivity",
+  "tags": [
+    "DaVinci Resolve"
+  ],
+  "type": "macro",
+  "macro": {
+    "type": "app",
+    "path": "C:/WINDOWS/system32/cmd.exe",
+    "icon": "ph.terminal-fill"
+  }
+}
