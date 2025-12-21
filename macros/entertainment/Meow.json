@@ -1,0 +1,102 @@
+{
+  "name": "Meow",
+  "author": "Meow",
+  "description": "A Desktop Music Oriented Macro Profile",
+  "category": "entertainment",
+  "tags": [
+    "Desktop"
+  ],
+  "type": "profile",
+  "profile": {
+    "macros": {
+      "Desktop": {
+        "type": "app",
+        "path": "C:\\Users\\pulak\\Desktop",
+        "icon": "fa5s.desktop"
+      },
+      "App": {
+        "type": "app",
+        "path": "C:/Users/pulak/Desktop/V4_Wired_v2/run.py",
+        "icon": "fa5.address-card"
+      },
+      "Mail": {
+        "type": "app",
+        "path": "https://mail.google.com/mail/u/0/#inbox",
+        "icon": "mdi.email"
+      },
+      "GMGN": {
+        "name": "GMGN",
+        "type": "launch",
+        "path": "https://gmgn.ai/trend/RDhcv4KG?chain=sol&tab=trending"
+      },
+      "Surprise": {
+        "name": "Surprise",
+        "type": "command",
+        "command": "powershell -command \"Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('This is a secret message From the Dev!' + [Environment]::NewLine + 'Happy Using your Macropad' + [Environment]::NewLine + [Environment]::NewLine + '                              ~ Regards  Pulak Nayak','Message')\""
+      },
+      "Spotify": {
+        "name": "Spotify",
+        "type": "launch",
+        "path": "C:\\Users\\pulak\\AppData\\Local\\Microsoft\\WindowsApps\\SpotifyAB.SpotifyMusic_zpdnekdrzrea0\\Spotify.exe"
+      },
+      "Spotify (No Ads)": {
+        "name": "Spotify (No Ads)",
+        "type": "command",
+        "command": "spicetify auto"
+      },
+      "WLED": {
+        "name": "WLED",
+        "type": "launch",
+        "path": "http://192.168.29.167/#Colors"
+      },
+      "Task Manager": {
+        "name": "Task Manager",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key_down",
+            "value": "Ctrl"
+          },
+          {
+            "type": "key_down",
+            "value": "Shift"
+          },
+          {
+            "type": "key",
+            "value": "Esc"
+          },
+          {
+            "type": "key_up",
+            "value": "Shift"
+          },
+          {
+            "type": "key_up",
+            "value": "Ctrl"
+          }
+        ]
+      },
+      "Resume": {
+        "name": "Resume",
+        "type": "command",
+        "command": "C:\\Users\\pulak\\Desktop\\Pulak_Nayak_CV.pdf"
+      },
+      "CMD": {
+        "type": "app",
+        "path": "C:/WINDOWS/system32/cmd.exe",
+        "icon": "ph.terminal-fill",
+        "origin": "community"
+      }
+    },
+    "keys": {
+      "0": "Copy",
+      "1": "WLED",
+      "2": "Media Prev",
+      "3": "Task Manager",
+      "4": "Media Play/Pause",
+      "5": "Spotify (No Ads)",
+      "6": "Media Next"
+    },
+    "knobs": {},
+    "knob_mode": "Standard"
+  }
+}
