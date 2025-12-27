@@ -1,0 +1,83 @@
+name: Process Macro Submission
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-macro:
+    if: startsWith(github.event.issue.title, '[Macro]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract JSON and Create File
+        id: process
+        shell: python
+        run: |
+          import os
+          import json
+          import re
+
+          # Get issue body
+          body = os.environ['ISSUE_BODY']
+          
+          try:
+              # Find JSON content - look for code blocks or just raw JSON
+              # We expect the body to contain JSON, maybe wrapped in ```json ```
+              json_match = re.search(r'```json\s*(\{.*?\})\s*```', body, re.DOTALL)
+              if json_match:
+                  json_str = json_match.group(1)
+              else:
+                  # Try finding just raw json start/end
+                  json_match = re.search(r'(\{.*\})', body, re.DOTALL)
+                  if json_match:
+                      json_str = json_match.group(1)
+                  else:
+                      print("::error::No JSON found in issue body")
+                      exit(1)
+
+              data = json.loads(json_str)
+              
+              # Basic validation
+              if 'name' not in data:
+                  print("::error::JSON missing 'name' field")
+                  exit(1)
+
+              # Sanitize filename
+              name = "".join([c for c in data['name'] if c.isalpha() or c.isdigit() or c in (' ','-','_')]).rstrip()
+              filename = f"macros/community/{name}.json"
+              
+              # Ensure directory exists
+              os.makedirs('macros/community', exist_ok=True)
+              
+              # Write file
+              with open(filename, 'w') as f:
+                  json.dump(data, f, indent=4)
+                  
+              print(f"::set-output name=filepath::{filename}")
+              print(f"Created {filename}")
+
+          except Exception as e:
+              print(f"::error::Failed to process JSON: {e}")
+              exit(1)
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add macros/community/*.json
+          git commit -m "Add community macro from Issue #${{ github.event.issue.number }}"
+          git push
+
+      - name: Close Issue
+        uses: peter-evans/close-issue@v3
+        with:
+            comment: "✅ Macro automatically processed and added to library!"

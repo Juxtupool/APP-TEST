@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macropad Pro</title>
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/community.css">
+    <link rel="stylesheet" href="css/submit-modal.css">
+</head>
+
+<body>
+    <!-- Custom Title Bar -->
+    <div id="title-bar" class="title-bar">
+        <div class="title-bar-drag-region pywebview-drag-region">
+            <!-- Content removed for clean look -->
+        </div>
+        <div class="title-bar-controls">
+            <button id="btn-minimize" class="control-btn" title="Minimize">
+                <i class="fa-solid fa-minus"></i>
+            </button>
+            <button id="btn-close" class="control-btn close" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-keyboard"></i>
+                <span>Macropad Pro</span>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-page="keys">
+                    <i class="fa-solid fa-gamepad"></i> Keys
+                </button>
+                <button class="nav-item" data-page="knob">
+                    <i class="fa-solid fa-circle-notch"></i> Knob
+                </button>
+                <button class="nav-item" data-page="settings">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+                <button class="nav-item" data-page="community">
+                    <i class="fa-solid fa-store"></i> Macro Hub
+                </button>
+            </nav>
+
+            <div class="profile-section">
+                <h3>Profile</h3>
+                <!-- Hidden Select for Logic -->
+                <select id="profile-select" style="display: none;">
+                    <!-- Populated by JS -->
+                </select>
+
+                <!-- Custom Profile Dropdown -->
+                <div class="custom-dropdown-wrapper" style="width: 100%; margin-bottom: 12px;">
+                    <button id="btn-profile-dropdown" class="custom-dropdown-btn">
+                        <span id="profile-label">Loading...</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div id="profile-dropdown-menu" class="custom-dropdown-menu dropdown-up">
+                        <!-- Dropping upwards -->
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <button id="btn-new-profile" title="New Profile"><i class="fa-solid fa-plus"></i></button>
+                    <button id="btn-edit-profile" title="Edit Profile"><i class="fa-solid fa-pen"></i></button>
+                    <button id="btn-link-app" title="Link App to Profile" disabled
+                        style="opacity: 0.5; cursor: not-allowed;"><i class="fa-solid fa-link"></i></button>
+                    <button id="btn-delete-profile" title="Delete Profile"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>
+
+            <div class="connection-status" id="connection-status" role="status" aria-live="polite">
+                <div class="status-indicator"></div>
+                <span id="status-text">Disconnected</span>
+                <label class="switch">
+                    <input type="checkbox" id="connection-toggle" aria-label="Toggle device connection">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 id="page-title">Key Configuration</h2>
+                <div class="active-profile-display">
+                    <span>Active: </span>
+                    <span id="active-profile-name" class="highlight">Default Profile</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Keys Page -->
+                <div id="page-keys" class="page active">
+                    <div class="layout-split">
+                        <div class="key-grid-container">
+                            <div class="key-grid">
+                                <!-- 6 Keys Grid -->
+                                <div class="key-btn" data-id="1">
+                                    <div class="key-cap"><i class="fa-solid fa-plus"></i></div>
+                                    <div class="key-label">K1</div>
+                                </div>
+                                <div class="key-btn" data-id="2">
+                                    <div class="key-cap"><i class="fa-solid fa-plus"></i></div>
+                                    <div class="key-label">K2</div>
+                                </div>
+                                <div class="key-btn" data-id="3">
+                                    <div class="key-cap"><i class="fa-solid fa-plus"></i></div>
+                                    <div class="key-label">K3</div>
+                                </div>
+                                <div class="key-btn" data-id="4">
+                                    <div class="key-cap"><i class="fa-solid fa-plus"></i></div>
+                                    <div class="key-label">K4</div>
+                                </div>
+                                <div class="key-btn" data-id="5">
+                                    <div class="key-cap"><i class="fa-solid fa-plus"></i></div>
+                                    <div class="key-label">K5</div>
+                                </div>
+                                <div class="key-btn" data-id="6">
+                                    <div class="key-cap"><i class="fa-solid fa-plus"></i></div>
+                                    <div class="key-label">K6</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="macro-panel">
+                            <div class="macro-tabs">
+                                <button class="macro-tab active" data-tab="legacy">Legacy</button>
+                                <button class="macro-tab" data-tab="user">User</button>
+                            </div>
+
+                            <div class="macro-search-bar">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="macro-search-keys" class="macro-search-input"
+                                    placeholder="Search macros...">
+                                <button class="search-clear" id="search-clear-keys" title="Clear search">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <div class="search-result-count" id="search-count-keys" style="display: none;"></div>
+
+                            <div class="macro-tab-content active" id="tab-legacy">
+                                <div class="macro-list" id="macro-list-legacy"></div>
+                            </div>
+
+                            <div class="macro-tab-content" id="tab-user">
+                                <div class="macro-list" id="macro-list-user"></div>
+                            </div>
+
+                            <div class="macro-panel-footer">
+                                <button class="btn-primary full-width action-create-macro">
+                                    <i class="fa-solid fa-plus"></i> New Macro
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page-knob" class="page">
+                    <div class="knob-page-layout">
+                        <!-- Left: Mode Selection & Actions -->
+                        <div class="knob-column-left">
+                            <div class="mode-selector-card">
+                                <h3>Knob Feature Modes</h3>
+                                <div class="custom-select-wrapper">
+                                    <!-- Hidden Select for Logic -->
+                                    <select id="knob-mode-select" style="display: none;">
+                                        <option value="Custom">Custom</option>
+                                        <option value="Standard">Standard (Volume)</option>
+                                        <option value="Timeline Scrubber">Timeline Scrubber</option>
+                                        <option value="App Switcher (Alt+Tab)">App Switcher</option>
+                                        <option value="Window Switcher (Alt+Esc)">Window Switcher</option>
+                                    </select>
+
+                                    <!-- Custom Dropdown UI -->
+                                    <div class="custom-dropdown-wrapper" style="width: 100%;">
+                                        <button id="btn-knob-mode" class="custom-dropdown-btn">
+                                            <span id="knob-mode-label">Custom</span>
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </button>
+                                        <div id="knob-mode-dropdown" class="custom-dropdown-menu">
+                                            <div class="dropdown-item active" data-value="Custom">Custom</div>
+                                            <div class="dropdown-separator"></div>
+                                            <div class="dropdown-item" data-value="Standard">Standard (Volume)</div>
+                                            <div class="dropdown-item" data-value="Timeline Scrubber">Timeline
+                                                Scrubber
+                                            </div>
+                                            <div class="dropdown-item" data-value="App Switcher (Alt+Tab)">App
+                                                Switcher
+                                            </div>
+                                            <div class="dropdown-item" data-value="Window Switcher (Alt+Esc)">Window
+                                                Switcher</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p id="knob-mode-desc" class="mode-description"></p>
+
+                            </div>
+
+                            <div class="mode-selector-card">
+                                <h3>Knob Sensitivity</h3>
+                                <div class="range-slider-container"
+                                    style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                    <input type="range" id="knob-speed-slider" min="1" max="10" value="1" step="1"
+                                        style="flex: 1; accent-color: var(--accent-color);">
+                                    <span id="knob-speed-value" class="highlight"
+                                        style="min-width: 30px; text-align: right;">1x</span>
+                                </div>
+
+                            </div>
+
+                            <div class="knob-actions-list">
+                                <div class="knob-action-card" data-action="knob_rotate_left">
+                                    <div class="action-icon"><i class="fa-solid fa-rotate-left"></i></div>
+                                    <div class="action-details">
+                                        <span class="action-label">Rotate Left</span>
+                                        <span class="assigned-macro">None</span>
+                                    </div>
+                                </div>
+
+                                <div class="knob-action-card" data-action="knob_press">
+                                    <div class="action-icon"><i class="fa-solid fa-hand-pointer"></i></div>
+                                    <div class="action-details">
+                                        <span class="action-label">Press</span>
+                                        <span class="assigned-macro">None</span>
+                                    </div>
+                                </div>
+
+                                <div class="knob-action-card" data-action="knob_rotate_right">
+                                    <div class="action-icon"><i class="fa-solid fa-rotate-right"></i></div>
+                                    <div class="action-details">
+                                        <span class="action-label">Rotate Right</span>
+                                        <span class="assigned-macro">None</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Center: Visual -->
+                        <div class="knob-column-center">
+                            <div class="knob-visual-large">
+                                <div class="knob-visual-inner">
+                                    <div class="knob-indicator"></div>
+                                </div>
+                                <div class="knob-glow"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Macros -->
+                        <div class="knob-column-right">
+                            <div class="macro-panel full-height">
+                                <div class="macro-tabs">
+                                    <button class="macro-tab active" data-target="knob-tab-legacy">Legacy</button>
+                                    <button class="macro-tab" data-target="knob-tab-user">User</button>
+                                </div>
+
+                                <div class="macro-search-bar">
+                                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                    <input type="text" id="macro-search-knob" class="macro-search-input"
+                                        placeholder="Search macros...">
+                                    <button class="search-clear" id="search-clear-knob" title="Clear search">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                                <div class="search-result-count" id="search-count-knob" style="display: none;">
+                                </div>
+
+                                <div class="macro-tab-content active" id="knob-tab-legacy">
+                                    <div class="macro-list" id="knob-macro-list-legacy"></div>
+                                </div>
+
+                                <div class="macro-tab-content" id="knob-tab-user">
+                                    <div class="macro-list" id="knob-macro-list-user"></div>
+                                </div>
+
+                                <div class="macro-panel-footer">
+                                    <button class="btn-primary full-width action-create-macro">
+                                        <i class="fa-solid fa-plus"></i> New Macro
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Settings Page -->
+                <div id="page-settings" class="page">
+                    <div class="settings-group">
+                        <h3>Appearance</h3>
+                        <div class="setting-item">
+                            <label>Theme</label>
+                            <div class="theme-selector-container">
+                                <div class="theme-card active" data-theme="dark">
+                                    <div class="theme-preview dark-preview">
+                                        <div class="preview-sidebar"></div>
+                                        <div class="preview-content">
+                                            <div class="preview-header"></div>
+                                            <div class="preview-body"></div>
+                                        </div>
+                                    </div>
+                                    <span>Dark</span>
+                                </div>
+                                <div class="theme-card" data-theme="light">
+                                    <div class="theme-preview light-preview">
+                                        <div class="preview-sidebar"></div>
+                                        <div class="preview-content">
+                                            <div class="preview-header"></div>
+                                            <div class="preview-body"></div>
+                                        </div>
+                                    </div>
+                                    <span>Light</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <h3>System</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+                            <!-- Column 1: App Settings -->
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <div class="setting-item"
+                                    style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label>Run at Startup</label>
+                                    <label class="switch">
+                                        <input type="checkbox" id="chk-startup">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                                <div class="setting-item"
+                                    style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label>Minimize to Tray</label>
+                                    <label class="switch">
+                                        <input type="checkbox" id="chk-tray">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                                <div class="setting-item"
+                                    style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label>Auto-Switch Profiles</label>
+                                    <label class="switch">
+                                        <input type="checkbox" id="chk-auto-switch">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Column 2: Device Actions -->
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <button class="btn-secondary" id="btn-check-updates" style="width: 100%;">
+                                    <i class="fa-solid fa-rotate"></i> Check for Updates
+                                </button>
+                                <div style="text-align: center; font-size: 0.85rem; color: #888; margin-top: -5px;">
+                                    <span id="firmware-version-display">Firmware: Unknown</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Danger Zone</h3>
+                        <p style="color: #666; font-size: 0.85rem; margin-bottom: 10px;">Resetting will delete all
+                            profiles and macros.</p>
+                        <button class="btn-danger" id="btn-reset-defaults">Reset to Defaults</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Macro Hub (Community) Page - Moved outside main for full control -->
+        <div id="page-community" class="page">
+            <div class="community-header">
+                <div class="community-search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="community-search" placeholder="Search community macros...">
+                    <button class="community-btn-submit">
+                        <i class="fa-solid fa-upload"></i> Submit Macro
+                    </button>
+                </div>
+
+                <div class="community-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="office">Office</button>
+                    <button class="filter-btn" data-filter="productivity">Productivity</button>
+                    <button class="filter-btn" data-filter="creative">Creative</button>
+                    <button class="filter-btn" data-filter="gaming">Gaming</button>
+                    <button class="filter-btn" data-filter="entertainment">Entertainment</button>
+                    <div class="sort-dropdown-wrapper">
+                        <!-- Custom Filter Button -->
+                        <button id="btn-community-filter" class="filter-toggle-btn">
+                            <i class="fa-solid fa-filter"></i> Filter
+                        </button>
+
+                        <!-- Custom Dropdown Menu (Hidden by default) -->
+                        <div id="community-filter-dropdown" class="custom-dropdown-menu dropdown-right">
+                            <div class="dropdown-item active" data-value="recent">Recent</div>
+                            <div class="dropdown-item" data-value="downloads">Most Downloads</div>
+                            <div class="dropdown-item" data-value="likes">Most Likes</div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-item" data-value="profiles_only">Profiles Only</div>
+                            <div class="dropdown-item" data-value="macros_only">Macros Only</div>
+                        </div>
+
+                        <!-- Hidden Native Select (Preserves App Logic) -->
+                        <select id="community-sort" class="sort-select" style="display: none;">
+                            <option value="recent">Recent</option>
+                            <option value="downloads">Most Downloads</option>
+                            <option value="likes">Most Likes</option>
+                            <option value="profiles_only">Profiles Only</option>
+                            <option value="macros_only">Macros Only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="community-content">
+                <div id="community-macros-grid" class="community-grid">
+                    <!-- Macros will be populated by JS -->
+                    <div class="empty-state">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <h4>No Community Macros</h4>
+                        <p>Configure GitHub repository in config.json to browse community macros</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="macro-editor-modal" class="modal">
+        <div class="modal-content macro-editor-content">
+            <div class="modal-header">
+                <h3>Edit Macro</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Macro Name & Icon</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="btn-macro-icon" class="icon-selector-btn" title="Select Icon">
+                            <i class="fa-solid fa-bolt"></i>
+                        </button>
+                        <input type="text" id="macro-name-input" placeholder="e.g., Copy Text" style="flex: 1;">
+                    </div>
+                </div>
+
+                <div class="modal-tabs">
+                    <button class="modal-tab active" data-tab="keystrokes">Keystrokes</button>
+                    <button class="modal-tab" data-tab="launch">Launch App/File</button>
+                    <button class="modal-tab" data-tab="command">Command</button>
+                </div>
+
+                <!-- Keystrokes Tab -->
+                <div class="modal-tab-content active" id="modal-tab-keystrokes">
+                    <div class="recorder-section">
+                        <div class="recorder-controls">
+                            <button id="btn-record-toggle" class="btn-secondary">
+                                <i class="fa-solid fa-circle"></i> Start Recording
+                            </button>
+                            <button id="btn-clear-macro" class="btn-secondary" title="Clear">
+                                <i class="fa-solid fa-eraser"></i>
+                            </button>
+                        </div>
+                        <div class="keys-display" id="keys-display">
+                            <span class="placeholder-text">Press keys to record...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Launch Tab -->
+                <div class="modal-tab-content" id="modal-tab-launch">
+                    <div class="form-group">
+                        <label>Application / File Path / URL</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="launch-path-input"
+                                placeholder="e.g. C:\Windows\notepad.exe or https://google.com" style="flex: 1;">
+                            <button id="btn-browse-file" class="btn-secondary"><i
+                                    class="fa-solid fa-folder-open"></i></button>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">
+                            Enter a full file path, or a URL starting with http:// or https://
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Command Tab -->
+                <div class="modal-tab-content" id="modal-tab-command">
+                    <div class="form-group">
+                        <label>Shell Command / Script</label>
+                        <textarea id="command-input" rows="5"
+                            placeholder="e.g. echo 'Hello' > test.txt&#10;python script.py"
+                            style="width: 100%; padding: 10px; background: #1a1a1a; color: white; border: 1px solid #555; border-radius: 6px; font-family: monospace; resize: vertical; box-sizing: border-box;"></textarea>
+                        <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">
+                            Executes in system shell. Use with caution.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Icon Browser (Hidden by default) -->
+                <div id="icon-browser-container" style="display: none;">
+                    <div class="icon-browser-header">
+                        <button class="btn-secondary" id="btn-back-to-editor"><i class="fa-solid fa-arrow-left"></i>
+                            Back</button>
+                        <div class="icon-search-wrapper" style="flex: 1; margin-left: 10px;">
+                            <input type="text" id="icon-search-input" placeholder="Search icons..."
+                                style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box;">
+                        </div>
+                    </div>
+                    <div class="icon-browser-content">
+                        <!-- Single column scrollable container -->
+                        <div id="icon-browser-body" class="icon-browser-body">
+                            <!-- Populated by JS: Headers and Grids -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- End modal-body -->
+
+            <div class="modal-footer">
+                <button class="btn-danger" id="btn-cancel-macro-editor">Cancel</button>
+                <button class="btn-primary" id="btn-save-macro">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Modal (Alerts/Prompts) -->
+    <div id="generic-modal" class="modal">
+        <div class="modal-content generic-modal-content">
+            <div class="modal-icon generic-modal-icon"></div> <!-- Icon container -->
+            <div class="modal-header no-border">
+                <h3 id="generic-modal-title">Title</h3>
+            </div>
+            <div class="modal-body">
+                <p id="generic-modal-message">Message goes here</p>
+                <div id="generic-modal-progress-container" class="progress-container" style="display: none;">
+                    <div id="generic-modal-progress-bar" class="progress-bar"></div>
+                </div>
+                <input type="text" id="generic-modal-input" placeholder="Type here...">
+            </div>
+            <div class="modal-footer no-border center-buttons">
+                <button class="btn-cancel" id="generic-modal-cancel">Cancel</button>
+                <button class="btn-primary" id="generic-modal-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Macro Submission Modal -->
+    <div id="submit-macro-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-upload"></i> Submit Macro to Community</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>What would you like to submit?</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="submit-type" value="macro" checked>
+                            <span class="radio-label">
+                                <i class="fa-solid fa-bolt"></i>
+                                <strong>Single Macro</strong>
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="submit-type" value="profile">
+                            <span class="radio-label">
+                                <i class="fa-solid fa-layer-group"></i>
+                                <strong>Entire Profile</strong>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="macro-select-group">
+                    <label for="submit-macro-select">Select Macro</label>
+                    <select id="submit-macro-select" class="form-input">
+                        <option value="">-- Choose a macro --</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="profile-select-group" style="display: none;">
+                    <label for="submit-profile-select">Select Profile</label>
+                    <select id="submit-profile-select" class="form-input">
+                        <option value="">-- Choose a profile --</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label for="submit-creator">Creator Name *</label>
+                        <input type="text" id="submit-creator" class="form-input" placeholder="Name">
+                    </div>
+                    <div>
+                        <label for="submit-category">Category</label>
+                        <select id="submit-category" class="form-input">
+                            <option value="office">Office</option>
+                            <option value="productivity">Productivity</option>
+                            <option value="creative">Creative</option>
+                            <option value="gaming">Gaming</option>
+                            <option value="entertainment">Entertainment</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="submit-description">Description *</label>
+                    <textarea id="submit-description" class="form-input" rows="2"
+                        placeholder="What does this macro do?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="submit-tags">Tags</label>
+                    <input type="text" id="submit-tags" class="form-input"
+                        placeholder="e.g., productivity, adobe, shortcuts">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="submit-modal-cancel">Cancel</button>
+                <button class="btn-primary" id="submit-modal-confirm">
+                    <i class="fa-solid fa-paper-plane"></i> Submit to GitHub
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link App Modal -->
+    <div id="link-app-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-link"></i> Link Application</h3>
+                <button class="modal-close" id="link-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">
+                    Select a running application or enter manually to auto-switch to this profile.
+                </p>
+
+                <div class="form-group">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin: 0;">Active Applications</label>
+                        <button id="btn-refresh-apps" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;"
+                            title="Refresh List"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                    </div>
+                    <select id="active-apps-list" class="form-input" size="8"
+                        style="height: 180px; overflow-y: auto; cursor: pointer;">
+                        <option value="" disabled>Loading apps...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="manual-app-input">Or enter manually</label>
+                    <input type="text" id="manual-app-input" class="form-input"
+                        placeholder="Process Name (e.g. chrome.exe)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="link-modal-cancel">Cancel</button>
+                <button class="btn-primary" id="link-modal-confirm">Link App</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/community.js"></script>
+    <script src="js/update.js"></script>
+</body>
+
+</html>

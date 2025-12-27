@@ -1,0 +1,650 @@
+/* ===========================
+   COMMUNITY / MACRO HUB STYLES
+   Enhanced UI/UX Version
+   =========================== */
+
+/* ===========================
+   HEADER SECTION
+   =========================== */
+.community-header {
+    padding: 32px 40px;
+    margin-bottom: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.community-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    width: 100%;
+}
+
+.community-search-bar .search-icon {
+    position: absolute;
+    left: 20px;
+    color: var(--text-muted);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.community-search-bar input {
+    flex: 1;
+    padding: 14px 20px 14px 52px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 15px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.community-search-bar input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    outline: none;
+}
+
+.community-search-bar input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Submit Button */
+.community-btn-submit {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.community-btn-submit::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.community-btn-submit:hover::before {
+    left: 100%;
+}
+
+.community-btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.community-btn-submit:active {
+    transform: translateY(0);
+}
+
+/* ===========================
+   FILTER & SORT SECTION
+   =========================== */
+.community-filters {
+    display: flex;
+    justify-content: flex-start;
+    /* Changed from space-between */
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 10px 20px;
+    background: transparent;
+    border-radius: 24px;
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.filter-btn.active {
+    background: rgba(79, 70, 229, 0.15);
+    border-color: #4F46E5;
+    color: #818CF8;
+}
+
+/* Sort Dropdown */
+.sort-dropdown-wrapper {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sort-dropdown-wrapper label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sort-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 10px 36px 10px 16px;
+    background-color: rgba(255, 255, 255, 0.05);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 160px;
+}
+
+.sort-select option {
+    background-color: #222;
+    color: var(--text-primary);
+    padding: 12px;
+}
+
+.sort-select:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: #4F46E5;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* ===========================
+   CONTENT AREA & GRID
+   =========================== */
+#page-community {
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    /* Prevent body scroll */
+    padding: 0;
+}
+
+#page-community.active {
+    display: flex;
+}
+
+.community-header {
+    flex-shrink: 0;
+    /* Header doesn't shrink */
+    margin-bottom: 0;
+}
+
+.community-content {
+    background-color: transparent;
+    border-radius: 0;
+    padding: 40px;
+    border: none;
+    flex-grow: 1;
+    /* Take remaining space */
+    overflow-y: auto;
+    /* Scroll internally */
+    height: auto;
+    min-height: 0;
+    /* Important for flex scrolling */
+    max-height: none;
+}
+
+.community-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    padding-bottom: 40px;
+    /* Bottom spacing */
+}
+
+/* Responsive Grid */
+@media (min-width: 1600px) {
+    .community-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .community-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .community-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .community-header {
+        padding: 24px 20px;
+    }
+
+    .community-content {
+        padding: 24px 20px;
+    }
+}
+
+/* ===========================
+   MACRO CARDS
+   =========================== */
+.macro-card {
+    position: relative;
+    background: #222;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+}
+
+.macro-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.03), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: 16px;
+    pointer-events: none;
+}
+
+.macro-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.macro-card:hover::before {
+    opacity: 1;
+}
+
+/* Community Badge */
+.community-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    padding: 6px 12px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60A5FA;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    z-index: 1;
+}
+
+/* Card Header */
+.macro-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-right: 80px;
+    /* Space for community badge */
+}
+
+.macro-card-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.macro-card-info {
+    flex: 1;
+    min-width: 0;
+    /* Enable text truncation */
+}
+
+.macro-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #F9FAFB;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.macro-card-author {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.macro-card-author i {
+    font-size: 11px;
+}
+
+/* Description */
+.macro-card-description {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Tags */
+.macro-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.macro-tag {
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s;
+}
+
+.macro-tag:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Footer */
+.macro-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.macro-card-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.macro-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.macro-stat i {
+    color: #60A5FA;
+    font-size: 14px;
+}
+
+/* Add to Library Button */
+.macro-card-btn {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.macro-card-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+.macro-card-btn:active {
+    transform: scale(0.98);
+}
+
+.macro-card-btn i {
+    font-size: 13px;
+}
+
+/* ===========================
+   LOADING STATE
+   =========================== */
+.community-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+    grid-column: 1 / -1;
+}
+
+.community-loading i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    animation: spin 1s linear infinite;
+    color: #4F46E5;
+}
+
+.community-loading p {
+    font-size: 15px;
+    opacity: 0.7;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Skeleton Loading (optional enhancement) */
+.skeleton-card {
+    background: #222;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-line {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skeleton-line.short {
+    width: 60%;
+}
+
+.skeleton-line.medium {
+    width: 80%;
+}
+
+@keyframes skeleton-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ===========================
+   EMPTY STATE
+   =========================== */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.empty-state h4 {
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    font-size: 15px;
+    opacity: 0.7;
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+/* ===========================
+   COMMUNITY ORIGIN STYLING
+   =========================== */
+.macro-card.community-origin {
+    border-color: rgba(79, 70, 229, 0.3);
+}
+
+.macro-card.community-origin:hover {
+    border-color: rgba(79, 70, 229, 0.5);
+}
+
+[data-theme="dark"] .macro-card.community-origin {
+    background: rgba(79, 70, 229, 0.05);
+}
+
+/* ===========================
+   SCROLLBAR STYLING
+   =========================== */
+.community-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.community-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+}
+
+.community-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.community-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===========================
+   ANIMATIONS
+   =========================== */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.macro-card {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Stagger animation for cards */
+.macro-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.macro-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.macro-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.macro-card:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.macro-card:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+.macro-card:nth-child(6) {
+    animation-delay: 0.3s;
+}

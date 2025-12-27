@@ -1,0 +1,77 @@
+/* CSS for Macro Search Bar and Fixed Footer */
+
+.macro-search-bar {
+    padding: 10px;
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.macro-search-input {
+    flex: 1;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.macro-search-input:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+}
+
+.search-icon {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.macro-panel-footer {
+    padding: 10px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--sidebar-bg);
+    /* Match tab bg or darker */
+    margin-top: auto;
+    /* Push to bottom if flex column */
+}
+
+.full-width {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    font-size: 0.95rem;
+}
+
+/* Adjust macro-list to be scrollable within the remaining space */
+.macro-tab-content {
+    flex: 1;
+    overflow: hidden;
+    /* Prevent spillover */
+    display: flex;
+    /* Make content flex to hold list */
+    flex-direction: column;
+    padding: 0;
+    /* Remove padding from container, add to list if needed */
+}
+
+/* Override previous macro-tab-content display:block */
+.macro-tab-content.active {
+    display: flex;
+}
+
+.macro-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: none;
+    /* remove fixed max-height */
+    padding: 15px;
+    /* restore padding here */
+}
