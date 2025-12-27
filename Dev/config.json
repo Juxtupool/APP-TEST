@@ -1,0 +1,38 @@
+{
+    "app": {
+        "log_level": "INFO",
+        "log_file": "macropad.log",
+        "current_version": "1.0.0"
+    },
+    "serial": {
+        "baudrate": 115200,
+        "timeout": 0.1,
+        "port_cache_duration": 2.0
+    },
+    "firmware": {
+        "flash_baudrate": 460800,
+        "default_firmware_path": "firmware/build",
+        "current_version": "1.0.0"
+    },
+    "knob": {
+        "app_switcher_release_delay": 0.35
+    },
+    "debounce": {
+        "serial_read_sleep": 0.01
+    },
+    "auto_switching": {
+        "enabled": true,
+        "rules": {
+            "resolve.exe": "DaVinci Resolve"
+        }
+    },
+    "github": {
+        "firmware_repo": "Juxtupool/APP-TEST",
+        "app_repo": "Juxtupool/APP-TEST",
+        "community_repo": "Juxtupool/APP-TEST",
+        "token": "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"
+    },
+    "community": {
+        "submission_url": "https://hook.eu1.make.com/6ljc9mv9pphiii1ki2zkj7wro0ndrrj4"
+    }
+}
