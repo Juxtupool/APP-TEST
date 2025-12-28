@@ -1,0 +1,16 @@
+{
+  "name": "CMD",
+  "author": "Meow",
+  "description": "Opens Command Prompt",
+  "category": "office",
+  "tags": [
+    "CMD"
+  ],
+  "type": "macro",
+  "macro": {
+    "name": "CMD",
+    "icon": "icons/Development/terminal-box-line.svg",
+    "type": "launch",
+    "path": "C:\\Windows\\System32\\cmd.exe"
+  }
+}
