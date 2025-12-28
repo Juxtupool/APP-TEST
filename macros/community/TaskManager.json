@@ -1,0 +1,37 @@
+{
+  "name": "Task Manager",
+  "author": "Upools",
+  "description": "Launches Task Manager",
+  "category": "office",
+  "tags": [
+    "Task Manager"
+  ],
+  "type": "macro",
+  "macro": {
+    "name": "Task Manager",
+    "icon": "icons/Device/server-line.svg",
+    "type": "advanced",
+    "actions": [
+      {
+        "type": "key_down",
+        "value": "Ctrl"
+      },
+      {
+        "type": "key_down",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "Esc"
+      },
+      {
+        "type": "key_up",
+        "value": "Shift"
+      },
+      {
+        "type": "key_up",
+        "value": "Ctrl"
+      }
+    ]
+  }
+}
