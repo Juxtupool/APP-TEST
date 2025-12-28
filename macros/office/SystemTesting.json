@@ -1,0 +1,102 @@
+{
+  "name": "System Testing",
+  "author": "meow",
+  "description": "system testing",
+  "category": "office",
+  "tags": [
+    "Reboot",
+    "shutdown"
+  ],
+  "type": "profile",
+  "profile": {
+    "macros": {
+      "1": {
+        "name": "1",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "1"
+          }
+        ]
+      },
+      "2": {
+        "name": "2",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "2"
+          }
+        ]
+      },
+      "3": {
+        "name": "3",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "3"
+          }
+        ]
+      },
+      "4": {
+        "name": "4",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "4"
+          }
+        ]
+      },
+      "5": {
+        "name": "5",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "5"
+          }
+        ]
+      },
+      "6": {
+        "name": "6",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "6"
+          }
+        ]
+      },
+      "Reboot": {
+        "name": "Reboot",
+        "icon": "icons/Device/restart-line.svg",
+        "type": "command",
+        "command": "shutdown /r /t 0"
+      },
+      "Shutdown": {
+        "name": "Shutdown",
+        "icon": "icons/Device/shut-down-line.svg",
+        "type": "command",
+        "command": "shutdown /s /f /t 0"
+      },
+      "Mirror Copies": {
+        "name": "Mirror Copies",
+        "icon": "icons/Document/file-copy-fill.svg",
+        "type": "command",
+        "command": "for %D in (\"D:\\Over\\V4 Backups\\V4_Webview_NodeMCU - Main\", \"C:\\Users\\pulak\\Desktop\\Over\\Codes\\V4_Webview_NodeMCU - Main\") do robocopy \"C:\\Users\\pulak\\Desktop\\V4_Webview_NodeMCU - Main\" %D /MIR /MT /R:3 /W:5"
+      }
+    },
+    "keys": {
+      "1": "Reboot",
+      "2": "Shutdown",
+      "4": "Mirror Copies",
+      "5": "5",
+      "6": "6"
+    },
+    "knobs": {},
+    "knob_mode": "Standard"
+  }
+}
