@@ -1,0 +1,17 @@
+{
+  "name": "Spotify (No Ads)",
+  "author": "Upool",
+  "description": "Launch Spicetify Version of Spotify",
+  "category": "entertainment",
+  "tags": [
+    "Spicetify",
+    "Spotify"
+  ],
+  "type": "macro",
+  "macro": {
+    "name": "Spotify (No Ads)",
+    "icon": "icons/Logos/spotify-fill.svg",
+    "type": "command",
+    "command": "spicetify auto"
+  }
+}
