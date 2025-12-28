@@ -1,0 +1,16 @@
+{
+  "name": "Default Profile",
+  "author": "Check",
+  "description": "Default Profile",
+  "category": "office",
+  "tags": [
+    "Default"
+  ],
+  "type": "profile",
+  "profile": {
+    "macros": {},
+    "keys": {},
+    "knobs": {},
+    "knob_mode": "Timeline Scrubber"
+  }
+}
