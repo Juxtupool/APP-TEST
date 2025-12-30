@@ -1,0 +1,18 @@
+{
+  "name": "CMD",
+  "author": "Meow",
+  "description": "Launches Command Prompt",
+  "category": "office",
+  "tags": [
+    "CMD",
+    "Command Prompt"
+  ],
+  "type": "macro",
+  "macro": {
+    "name": "CMD",
+    "icon": "icons/Development/terminal-box-line.svg",
+    "type": "launch",
+    "path": "C:\\Windows\\System32\\cmd.exe",
+    "origin": "community"
+  }
+}
