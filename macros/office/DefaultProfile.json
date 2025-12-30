@@ -1,0 +1,14 @@
+{
+  "name": "Default Profile",
+  "author": "Check",
+  "description": "Default Blank Profile",
+  "category": "office",
+  "tags": [],
+  "type": "profile",
+  "profile": {
+    "macros": {},
+    "keys": {},
+    "knobs": {},
+    "knob_mode": "Standard"
+  }
+}
