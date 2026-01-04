@@ -1,0 +1,109 @@
+{
+  "name": "System Testing",
+  "author": "upool",
+  "description": "System Testing",
+  "category": "productivity",
+  "tags": [
+    "Reboot",
+    "Shutdown"
+  ],
+  "type": "profile",
+  "profile": {
+    "macros": {
+      "1": {
+        "name": "1",
+        "icon": "icons/Editor/number-1.svg",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "1"
+          }
+        ]
+      },
+      "2": {
+        "name": "2",
+        "icon": "icons/Editor/number-2.svg",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "2"
+          }
+        ]
+      },
+      "3": {
+        "name": "3",
+        "icon": "icons/Editor/number-3.svg",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "3"
+          }
+        ]
+      },
+      "4": {
+        "name": "4",
+        "icon": "icons/Editor/number-4.svg",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "4"
+          }
+        ]
+      },
+      "5": {
+        "name": "5",
+        "icon": "icons/Editor/number-5.svg",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "5"
+          }
+        ]
+      },
+      "6": {
+        "name": "6",
+        "icon": "icons/Editor/number-6.svg",
+        "type": "advanced",
+        "actions": [
+          {
+            "type": "key",
+            "value": "6"
+          }
+        ]
+      },
+      "Reboot": {
+        "name": "Reboot",
+        "icon": "icons/Device/restart-line.svg",
+        "type": "command",
+        "command": "shutdown /r /t 0"
+      },
+      "Shutdown": {
+        "name": "Shutdown",
+        "icon": "icons/Device/shut-down-line.svg",
+        "type": "command",
+        "command": "shutdown /s /f /t 0"
+      },
+      "Mirror Copies": {
+        "name": "Mirror Copies",
+        "icon": "icons/Document/file-copy-fill.svg",
+        "type": "command",
+        "command": "for %D in (\"D:\\Over\\V4 Backups\\V4_Webview_NodeMCU - Main\", \"C:\\Users\\pulak\\Desktop\\Over\\Codes\\V4_Webview_NodeMCU - Main\") do robocopy \"C:\\Users\\pulak\\Desktop\\V4_Webview_NodeMCU - Main\" %D /MIR /MT /R:3 /W:5"
+      }
+    },
+    "keys": {
+      "1": "Reboot",
+      "2": "Shutdown",
+      "3": "3",
+      "4": "Mirror Copies",
+      "5": "5",
+      "6": "6"
+    },
+    "knobs": {},
+    "knob_mode": "Standard"
+  }
+}
