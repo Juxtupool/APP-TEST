@@ -1,4 +1,4 @@
-# MacroPad Pro
+# Overcontrol
 
 Professional macro pad control software for NodeMCU-based hardware.
 
@@ -18,8 +18,8 @@ Professional macro pad control software for NodeMCU-based hardware.
 ### Installation
 
 1. Download the latest release
-2. Run `MacroPad_Pro_Setup.exe`
-3. Launch MacroPad Pro from Start Menu or Desktop
+2. Run `Overcontrol_Setup.exe`
+3. Launch Overcontrol from Start Menu or Desktop
 4. Connect your NodeMCU device
 5. Start creating macros!
 
@@ -90,7 +90,7 @@ python run.py
 # Build executable
 python scripts\build_exe.py
 
-# Output: dist\MacroPad_Pro\MacroPad Pro.exe
+# Output: dist\Overcontrol\Overcontrol.exe
 ```
 
 See [BUILD_GUIDE.md](BUILD_GUIDE.md) for detailed instructions.

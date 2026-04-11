@@ -48,7 +48,7 @@ class UpdateManager:
             current_version = APP_VERSION
             api_url = f"https://api.github.com/repos/{repo}/releases/latest"
             
-            headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Macropad-Pro'}
+            headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Overcontrol'}
             token = self.config.get('github', {}).get('token')
             if token:
                 headers['Authorization'] = f'token {token}'
@@ -235,7 +235,7 @@ class UpdateManager:
             
             script_content = f"""
 @echo off
-title Updating OVERCONTROL...
+title Updating Overcontrol...
 color 0b
 
 echo Waiting for application to close (PID: {current_pid})...

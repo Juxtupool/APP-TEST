@@ -30,9 +30,9 @@ from .handlers.update_handler import UpdateMixin
 from .handlers.macro_handler import MacroMixin
 
 # Configure logging path (kept here for app initialization)
-log_dir = Path(os.getenv('APPDATA')) / "Macropad"
+log_dir = Path(os.getenv('APPDATA')) / "Overcontrol"
 log_dir.mkdir(parents=True, exist_ok=True)
-log_file = log_dir / "macropad.log"
+log_file = log_dir / "overcontrol.log"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -169,7 +169,7 @@ class Api(
         $textNodes.Item(0).AppendChild($template.CreateTextNode("{title}")) > $null
         $textNodes.Item(1).AppendChild($template.CreateTextNode("{message}")) > $null
         $notification = [Windows.UI.Notifications.ToastNotification]::new($template)
-        $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("OVERCONTROL")
+        $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Overcontrol")
         $notifier.Show($notification)
         """
         try:

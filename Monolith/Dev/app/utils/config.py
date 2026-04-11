@@ -1,5 +1,5 @@
 """
-Configuration loader for MacroPad application.
+Configuration loader for Overcontrol application.
 Centralizes all configuration values with defaults.
 Supports environment variables for sensitive data.
 """
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONFIG = {
     "app": {
         "log_level": "INFO",
-        "log_file": "macropad.log"
+        "log_file": "overcontrol.log"
     },
     "serial": {
         "baudrate": 115200,

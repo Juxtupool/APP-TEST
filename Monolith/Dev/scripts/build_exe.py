@@ -1,5 +1,5 @@
 """
-Build Script for MacroPad Pro
+Build Script for Overcontrol
 Creates production executable using PyInstaller with WebView2 Bootstrapper approach.
 This creates a ~5-10MB installer instead of ~400MB by not bundling WebView2.
 """
@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 # Configuration
-APP_NAME = "MacroPad Pro"
+APP_NAME = "Overcontrol"
 MAIN_SCRIPT = "run.py"
 ICON_PATH = "app/assets/icons/app-icon.ico"  # Create this if you have one
 VERSION = "1.0.0"

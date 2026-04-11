@@ -38,7 +38,7 @@ class FirmwareUpdateService:
         """Get headers for GitHub API request."""
         headers = {
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'Macropad-Pro'
+            'User-Agent': 'Overcontrol'
         }
         
         if self.github_token:

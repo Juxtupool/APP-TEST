@@ -45,7 +45,7 @@ def run_tray(api, window):
     def on_quit(icon, item):
         shutdown_application(api, window, icon)
 
-    icon = pystray.Icon("OVERCONTROL", create_icon(), "OVERCONTROL", menu=pystray.Menu(
+    icon = pystray.Icon("Overcontrol", create_icon(), "Overcontrol", menu=pystray.Menu(
         pystray.MenuItem("Open", on_open),
         pystray.MenuItem("Quit", on_quit)
     ))
@@ -98,7 +98,7 @@ def restore_window(window):
     window.show()
     # Force redraw to fix black screen when restoring from tray
     try:
-        hwnd = win32gui.FindWindow(None, "OVERCONTROL")
+        hwnd = win32gui.FindWindow(None, "Overcontrol")
         if hwnd:
             win32gui.SetWindowPos(
                 hwnd, 0, 0, 0, 0, 0,
@@ -270,10 +270,10 @@ def tray_loop(api):
 def main():
     # Single Instance Check using Mutex
     # Use a unique name for the mutex (Global\\ ensures it works across sessions if needed)
-    app_mutex = win32event.CreateMutex(None, False, "Global\\MacropadProMutex")
+    app_mutex = win32event.CreateMutex(None, False, "Global\\OvercontrolMutex")
     if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
         print("Another instance is already running. Brining it to focus...")
-        hwnd = win32gui.FindWindow(None, "OVERCONTROL")
+        hwnd = win32gui.FindWindow(None, "Overcontrol")
         if hwnd:
             # If minimized, restore it
             if win32gui.IsIconic(hwnd):
@@ -322,7 +322,7 @@ def main():
 
     # Create a transparent icon for the window
     import tempfile
-    transparent_icon_path = os.path.join(tempfile.gettempdir(), 'transparent_macropad.ico')
+    transparent_icon_path = os.path.join(tempfile.gettempdir(), 'transparent_overcontrol.ico')
     try:
         # Create it always to be sure
         img = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
@@ -332,7 +332,7 @@ def main():
         transparent_icon_path = None
 
     window = webview.create_window(
-        "OVERCONTROL", 
+        "Overcontrol", 
         url=index_path.as_uri() if index_path.exists() else None,
         js_api=api,
         width=1280,
@@ -350,7 +350,7 @@ def main():
     # Tray Logic
 
     # Initialize icon with dynamic menu
-    tray_icon = pystray.Icon("OVERCONTROL", create_icon(connected=api.is_connected()), "OVERCONTROL", menu=create_tray_menu(api, window))
+    tray_icon = pystray.Icon("Overcontrol", create_icon(connected=api.is_connected()), "Overcontrol", menu=create_tray_menu(api, window))
     api.tray_icon = tray_icon
     api.set_tray_update_callback(lambda: refresh_tray(api))
     
@@ -379,7 +379,7 @@ def main():
         max_retries = 20
         hwnd = 0
         for _ in range(max_retries):
-            hwnd = win32gui.FindWindow(None, "OVERCONTROL")
+            hwnd = win32gui.FindWindow(None, "Overcontrol")
             if hwnd:
                 break
             time.sleep(0.5)

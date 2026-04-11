@@ -1701,20 +1701,26 @@ const handleRecordingKey = (e, type) => {
 window.onRecordedKey = (type, keyName) => {
     if (!isRecording) return;
 
-    // Backend already handles mapping, so keyName is ready to use
-
-    // Logic: If UP event matches the very last DOWN event, merge into "key"
+    // Logic: Only merge UP event with its matching DOWN event if it happened IMMEDIATELY
+    // before this UP event. If other keys were pressed in between, we must keep
+    // the discrete Down/Up events to preserve the "Hold" state for combos (e.g. Ctrl+C).
     if (type === 'up') {
         if (recordedKeys.length > 0) {
             const lastAction = recordedKeys[recordedKeys.length - 1];
+            
+            // If the very last event was the matching Down event, merge them
             if (lastAction.type === 'key_down' && lastAction.value === keyName) {
-                lastAction.type = 'key'; // Merge
+                lastAction.type = 'key'; 
                 updateRecorderDisplay();
                 return;
             }
         }
-
-        // Check pending
+        
+        // If it wasn't immediate, we don't merge. This ensures combos are kept as:
+        // [Ctrl Down, C Press, Ctrl Up] instead of [Ctrl Press, C Press].
+        
+        // Fallback: Check if there is ANY unclosed key_down for this key just for internal consistency
+        // (though with pynput we always expect a DOWN before an UP)
         const hasPendingDown = recordedKeys.some(k => k.type === 'key_down' && k.value === keyName);
         if (!hasPendingDown) {
             recordedKeys.push({ type: 'key', value: keyName });
@@ -1725,6 +1731,17 @@ window.onRecordedKey = (type, keyName) => {
 
     recordedKeys.push({ type: type === 'down' ? 'key_down' : 'key_up', value: keyName });
     updateRecorderDisplay();
+};
+
+window.onRecordingEmergencyStop = async () => {
+    if (isRecording) {
+        isRecording = false;
+        document.body.classList.remove('recording-mode');
+        updateRecordButton();
+        if (typeof showAlert === 'function') {
+            await showAlert("Recording Stopped", "Keyboard released automatically (Safety Failsafe triggered).", "warning");
+        }
+    }
 };
 
 function openMacroEditor(macroName = null) {
@@ -2059,6 +2076,7 @@ document.getElementById('btn-cancel-macro-editor').addEventListener('click', () 
 
 async function closeMacroEditor() {
     macroModal.classList.remove('active');
+    document.body.classList.remove('recording-mode');
     setTimeout(async () => {
         macroModal.style.display = "none";
         if (isRecording) {
@@ -2185,6 +2203,14 @@ if (btnKnobMode && dropdownKnobMode && selectKnobMode) {
 
 async function toggleRecording() {
     isRecording = !isRecording;
+    
+    // Toggle global visual state
+    if (isRecording) {
+        document.body.classList.add('recording-mode');
+    } else {
+        document.body.classList.remove('recording-mode');
+    }
+
     if (isRecording) {
         if (recordedKeys.length === 0) actLastEventTime = Date.now();
         else actLastEventTime = Date.now();

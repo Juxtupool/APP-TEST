@@ -108,10 +108,80 @@
                     "icon": "icons/Development/code-box-line.svg",
                     "type": "launch",
                     "path": "C:\\Users\\pulak\\AppData\\Local\\Programs\\Antigravity\\Antigravity.exe"
+                },
+                "hello": {
+                    "name": "hello",
+                    "type": "advanced",
+                    "actions": [
+                        {
+                            "type": "key_down",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "H"
+                        },
+                        {
+                            "type": "key_up",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "E"
+                        },
+                        {
+                            "type": "key",
+                            "value": "L"
+                        },
+                        {
+                            "type": "key",
+                            "value": "L"
+                        },
+                        {
+                            "type": "key",
+                            "value": "O"
+                        },
+                        {
+                            "type": "key",
+                            "value": "Space"
+                        },
+                        {
+                            "type": "key_down",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "P"
+                        },
+                        {
+                            "type": "key_up",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "U"
+                        },
+                        {
+                            "type": "key",
+                            "value": "L"
+                        },
+                        {
+                            "type": "key",
+                            "value": "A"
+                        },
+                        {
+                            "type": "key",
+                            "value": "K"
+                        },
+                        {
+                            "type": "key",
+                            "value": "Space"
+                        }
+                    ]
                 }
             },
             "keys": {
-                "1": "Antigravity",
+                "1": "hello",
                 "2": "Previous Track",
                 "3": "Autobot",
                 "4": "Play/Pause",
@@ -123,13 +193,66 @@
             "origin": "community-profile",
             "linked_apps": [],
             "knob_speed": 1
+        },
+        "Git": {
+            "macros": {
+                "Git Status": {
+                    "name": "Git Status",
+                    "icon": "icons/Development/git-repository-commits-line.svg",
+                    "type": "command",
+                    "command": "cmd /k git status"
+                },
+                "Git Pull": {
+                    "name": "Git Pull",
+                    "icon": "icons/Development/git-pull-request-line.svg",
+                    "type": "command",
+                    "command": "cmd /k git pull"
+                },
+                "Git Push": {
+                    "name": "Git Push",
+                    "icon": "icons/Development/git-merge-line.svg",
+                    "type": "command",
+                    "command": "cmd /k git push"
+                },
+                "Git Add All": {
+                    "name": "Git Add All",
+                    "icon": "icons/Development/git-commit-line.svg",
+                    "type": "command",
+                    "command": "cmd /k git add -A && git status"
+                },
+                "Git Log": {
+                    "name": "Git Log",
+                    "icon": "icons/Development/git-branch-line.svg",
+                    "type": "command",
+                    "command": "cmd /k git log --oneline -n 10"
+                },
+                "Git Bash": {
+                    "name": "Git Bash",
+                    "icon": "icons/Logos/github-fill.svg",
+                    "type": "launch",
+                    "path": "C:\\Program Files\\Git\\git-bash.exe"
+                }
+            },
+            "keys": {
+                "1": "Git Status",
+                "2": "Git Pull",
+                "3": "Git Push",
+                "4": "Git Add All",
+                "5": "Git Log",
+                "6": "Git Bash"
+            },
+            "knobs": {},
+            "knob_mode": "Standard",
+            "origin": "community-profile",
+            "linked_apps": [],
+            "knob_speed": 1
         }
     },
     "active_profile": "Meow",
     "saved_colors": [
-        "#6496fa",
-        "#0bfafe"
+        "#5fce61",
+        "#64c3c3"
     ],
-    "accent_color": "#64e68c",
+    "accent_color": "#be78dc",
     "minimize_to_tray": true
 }

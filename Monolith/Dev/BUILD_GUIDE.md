@@ -1,8 +1,8 @@
-# MacroPad Pro - Setup and Build Guide
+# Overcontrol - Setup and Build Guide
 
 ## Overview
 
-This document provides complete instructions for setting up the development environment, building production executables, and creating installers for MacroPad Pro.
+This document provides complete instructions for setting up the development environment, building production executables, and creating installers for Overcontrol.
 
 ---
 

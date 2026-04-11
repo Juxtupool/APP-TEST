@@ -30,12 +30,12 @@ VSVersionInfo(
       StringTable(
         '040904B0',
         [StringStruct('CompanyName', 'Juxtupool'),
-        StringStruct('FileDescription', 'MacroPad Pro'),
+        StringStruct('FileDescription', 'Overcontrol'),
         StringStruct('FileVersion', '1.0.5'),
-        StringStruct('InternalName', 'MacroPad Pro'),
+        StringStruct('InternalName', 'Overcontrol'),
         StringStruct('LegalCopyright', 'Copyright (c) 2025 Juxtupool'),
-        StringStruct('OriginalFilename', 'MacroPad Pro.exe'),
-        StringStruct('ProductName', 'MacroPad Pro'),
+        StringStruct('OriginalFilename', 'Overcontrol.exe'),
+        StringStruct('ProductName', 'Overcontrol'),
         StringStruct('ProductVersion', '1.0.5')])
       ]), 
     VarFileInfo([VarStruct('Translation', [1033, 1200])])

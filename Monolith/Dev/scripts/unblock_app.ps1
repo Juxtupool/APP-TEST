@@ -1,7 +1,7 @@
-# Unblock MacroPad Pro files recursively
+# Unblock Overcontrol files recursively
 # This removes the "Mark of the Web" which often triggers Smart App Control
 
-$distPath = Join-Path $PSScriptRoot "..\dist\MacroPad Pro"
+$distPath = Join-Path $PSScriptRoot "..\dist\Overcontrol"
 
 if (Test-Path $distPath) {
     Write-Host "Unblocking files in: $distPath" -ForegroundColor Cyan
