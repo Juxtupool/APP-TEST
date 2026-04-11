@@ -1,0 +1,58 @@
+{
+  "name": "Git",
+  "author": "Git",
+  "description": "Git Controls \nPlease update your directory locations before usign",
+  "category": "office",
+  "tags": [],
+  "type": "profile",
+  "profile": {
+    "macros": {
+      "Git Status": {
+        "name": "Git Status",
+        "icon": "icons/Development/git-repository-commits-line.svg",
+        "type": "command",
+        "command": "cmd /k git status"
+      },
+      "Git Pull": {
+        "name": "Git Pull",
+        "icon": "icons/Development/git-pull-request-line.svg",
+        "type": "command",
+        "command": "cmd /k git pull"
+      },
+      "Git Push": {
+        "name": "Git Push",
+        "icon": "icons/Development/git-merge-line.svg",
+        "type": "command",
+        "command": "cmd /k git push"
+      },
+      "Git Add All": {
+        "name": "Git Add All",
+        "icon": "icons/Development/git-commit-line.svg",
+        "type": "command",
+        "command": "cmd /k git add -A && git status"
+      },
+      "Git Log": {
+        "name": "Git Log",
+        "icon": "icons/Development/git-branch-line.svg",
+        "type": "command",
+        "command": "cmd /k git log --oneline -n 10"
+      },
+      "Git Bash": {
+        "name": "Git Bash",
+        "icon": "icons/Logos/github-fill.svg",
+        "type": "launch",
+        "path": "C:\\Program Files\\Git\\git-bash.exe"
+      }
+    },
+    "keys": {
+      "1": "Git Status",
+      "2": "Git Pull",
+      "3": "Git Push",
+      "4": "Git Add All",
+      "5": "Git Log",
+      "6": "Git Bash"
+    },
+    "knobs": {},
+    "knob_mode": "Standard"
+  }
+}
