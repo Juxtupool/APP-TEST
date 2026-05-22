@@ -95,7 +95,7 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-bar">
-                <h2 id="page-title">Key Configuration</h2>
+                <h2 id="page-title">Key Map</h2>
                 <div class="top-bar-right">
                     <div class="active-profile-display">
                         <span>Active: </span>
@@ -183,7 +183,7 @@
                                     <!-- Hidden Select for Logic -->
                                     <select id="knob-mode-select" style="display: none;">
                                         <option value="Custom">Custom</option>
-                                        <option value="Standard">Standard (Volume)</option>
+                                        <option value="Standard">Volume</option>
                                         <option value="Timeline Scrubber">Timeline Scrubber</option>
                                         <option value="App Switcher (Alt+Tab)">App Switcher</option>
                                         <option value="Window Switcher (Alt+Esc)">Window Switcher</option>
@@ -198,7 +198,7 @@
                                         <div id="knob-mode-dropdown" class="custom-dropdown-menu">
                                             <div class="dropdown-item active" data-value="Custom">Custom</div>
                                             <div class="dropdown-separator"></div>
-                                            <div class="dropdown-item" data-value="Standard">Standard (Volume)</div>
+                                            <div class="dropdown-item" data-value="Standard">Volume</div>
                                             <div class="dropdown-item" data-value="Timeline Scrubber">Timeline
                                                 Scrubber
                                             </div>
@@ -215,15 +215,22 @@
                             </div>
 
                             <div class="mode-selector-card">
-                                <h3>Knob Sensitivity</h3>
+                                <h3>Knob Configuration</h3>
                                 <div class="range-slider-container"
                                     style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                    <label style="font-size: 0.85rem; color: #888; width: 60px;">Speed</label>
                                     <input type="range" id="knob-speed-slider" min="1" max="10" value="1" step="1"
                                         style="flex: 1; accent-color: var(--accent-color);">
                                     <span id="knob-speed-value" class="highlight"
                                         style="min-width: 30px; text-align: right;">1x</span>
                                 </div>
-
+                                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; border-top: 1px solid #333; padding-top: 12px;">
+                                    <label style="font-size: 0.9rem;">Reverse Direction</label>
+                                    <label class="switch">
+                                        <input type="checkbox" id="chk-knob-reverse">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
                             </div>
 
                             <div class="knob-actions-list">
@@ -317,8 +324,8 @@
                                         style="background-color: #5a6478;"></button>
                                     <button class="color-preset" data-color="#be78dc"
                                         style="background-color: #be78dc;"></button>
-                                    <button class="color-preset" data-color="#bec87d"
-                                        style="background-color: #bec87d;"></button>
+                                    <button class="color-preset" data-color="#bee628"
+                                        style="background-color: #bee628;"></button>
                                     <button class="color-preset" data-color="#ff5c7a"
                                         style="background-color: #ff5c7a;"></button>
                                     <button class="color-preset" data-color="#64e68c"

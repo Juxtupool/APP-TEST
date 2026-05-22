@@ -20,7 +20,7 @@ Professional macro pad control software for NodeMCU-based hardware.
 1. Download the latest release
 2. Run `Overcontrol_Setup.exe`
 3. Launch Overcontrol from Start Menu or Desktop
-4. Connect your NodeMCU device
+4. Connect your device
 5. Start creating macros!
 
 > **Note:** WebView2 Runtime will be installed automatically if not present.
@@ -60,7 +60,7 @@ Profiles are stored in `profiles.json` and are automatically backed up.
 ### Prerequisites
 
 - Python 3.8+
-- NodeMCU device (ESP8266)
+
 
 ### Setup
 
@@ -153,7 +153,7 @@ Install manually: https://developer.microsoft.com/microsoft-edge/webview2/
 
 - Check USB connection
 - Try different USB port
-- Install CH340G drivers (for most NodeMCU boards)
+
 
 ### "GitHub API errors"
 

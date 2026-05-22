@@ -230,6 +230,21 @@ class Api(
         self.update_tray()
 
     @safe_api
+    def get_knob_reverse(self):
+        """Get the knob reversal status from config."""
+        enabled = self._config.get("knob", {}).get("reverse_direction", False)
+        return {"status": "success", "enabled": enabled}
+
+    @safe_api
+    def set_knob_reverse(self, enabled):
+        """Set the knob reversal status in config."""
+        if "knob" not in self._config:
+            self._config["knob"] = {}
+        self._config["knob"]["reverse_direction"] = enabled
+        self._save_config()
+        return {"status": "success"}
+
+    @safe_api
     def browse_file_or_app(self):
         result = self._window.create_file_dialog(webview.OPEN_DIALOG)
         if result and len(result) > 0:

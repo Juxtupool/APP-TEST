@@ -2,6 +2,7 @@ import requests
 import logging
 from typing import Dict, List, Optional
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,12 @@ class CommunityLibraryService:
         else:
             self.api_base = None
             self.raw_base = None
+        
+        # Set up a requests.Session with connection pooling for concurrent requests
+        self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=15, pool_maxsize=30)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
         
         # Cache for performance
         self._categories_cache = None
@@ -73,7 +80,7 @@ class CommunityLibraryService:
             url = f"{self.api_base}/macros"
             logger.info(f"Fetching categories from {url}")
             
-            response = requests.get(url, headers=self._get_headers(), timeout=10)
+            response = self.session.get(url, headers=self._get_headers(), timeout=10)
             
             if response.status_code == 404:
                 logger.warning("Community repo or macros folder not found")
@@ -94,6 +101,30 @@ class CommunityLibraryService:
             logger.error(f"Error fetching categories: {e}")
             return []
     
+    def _fetch_single_macro(self, category: str, file: Dict) -> Optional[Dict]:
+        """
+        Fetch a single macro from raw content URL.
+        Designed to run in thread pool.
+        """
+        try:
+            macro_url = f"{self.raw_base}/macros/{category}/{file['name']}"
+            macro_response = self.session.get(macro_url, headers=self._get_headers(), timeout=10)
+            macro_response.raise_for_status()
+            
+            macro_data = macro_response.json()
+            
+            # Add metadata
+            macro_data['_metadata'] = {
+                'category': category,
+                'filename': file['name'],
+                'download_url': macro_url,
+                'size': file.get('size', 0)
+            }
+            return macro_data
+        except Exception as e:
+            logger.warning(f"Failed to fetch macro {file['name']}: {e}")
+            return None
+            
     def get_macros_in_category(self, category: str, force_refresh: bool = False) -> List[Dict]:
         """
         Get all macros in a specific category.
@@ -114,38 +145,29 @@ class CommunityLibraryService:
         
         try:
             url = f"{self.api_base}/macros/{category}"
-            logger.info(f"Fetching macros from {url}")
+            logger.info(f"Fetching macros listing from {url}")
             
-            response = requests.get(url, headers=self._get_headers(), timeout=10)
+            response = self.session.get(url, headers=self._get_headers(), timeout=10)
             response.raise_for_status()
             
             files = response.json()
+            json_files = [f for f in files if f['type'] == 'file' and f['name'].endswith('.json')]
             macros = []
             
-            # Filter JSON files and fetch their content
-            for file in files:
-                if file['type'] == 'file' and file['name'].endswith('.json'):
-                    try:
-                        # Fetch macro content from raw URL
-                        macro_url = f"{self.raw_base}/macros/{category}/{file['name']}"
-                        macro_response = requests.get(macro_url, headers=self._get_headers(), timeout=10)
-                        macro_response.raise_for_status()
-                        
-                        macro_data = macro_response.json()
-                        
-                        # Add metadata
-                        macro_data['_metadata'] = {
-                            'category': category,
-                            'filename': file['name'],
-                            'download_url': macro_url,
-                            'size': file.get('size', 0)
-                        }
-                        
-                        macros.append(macro_data)
-                        
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch macro {file['name']}: {e}")
-                        continue
+            if json_files:
+                # Use ThreadPoolExecutor to fetch raw content concurrently
+                with ThreadPoolExecutor(max_workers=min(10, len(json_files))) as executor:
+                    future_to_file = {
+                        executor.submit(self._fetch_single_macro, category, file): file
+                        for file in json_files
+                    }
+                    for future in as_completed(future_to_file):
+                        result = future.result()
+                        if result:
+                            macros.append(result)
+            
+            # Sort macros by filename to maintain a consistent presentation
+            macros.sort(key=lambda x: x.get('_metadata', {}).get('filename', '').lower())
             
             self._macros_cache[cache_key] = macros
             logger.info(f"Fetched {len(macros)} macros from {category}")
@@ -169,33 +191,31 @@ class CommunityLibraryService:
         query_lower = query.lower()
         results = []
         
-        categories = self.get_categories()
+        # Use fast parallelized get_all_macros
+        macros = self.get_all_macros(sort_by='name')
         
-        for category in categories:
-            macros = self.get_macros_in_category(category)
+        for macro in macros:
+            # Search in name
+            if query_lower in macro.get('name', '').lower():
+                results.append(macro)
+                continue
             
-            for macro in macros:
-                # Search in name
-                if query_lower in macro.get('name', '').lower():
-                    results.append(macro)
-                    continue
-                
-                # Search in description
-                if query_lower in macro.get('description', '').lower():
-                    results.append(macro)
-                    continue
-                
-                # Search in tags
-                tags = macro.get('tags', [])
-                if any(query_lower in tag.lower() for tag in tags):
-                    results.append(macro)
+            # Search in description
+            if query_lower in macro.get('description', '').lower():
+                results.append(macro)
+                continue
+            
+            # Search in tags
+            tags = macro.get('tags', [])
+            if any(query_lower in tag.lower() for tag in tags):
+                results.append(macro)
         
         logger.info(f"Search '{query}' returned {len(results)} results")
         return results
     
     def get_all_macros(self, sort_by: str = 'name', force_refresh: bool = False) -> List[Dict]:
         """
-        Get all macros from all categories.
+        Get all macros from all categories in parallel.
         
         Args:
             sort_by: Sort method ('name', 'category', 'date')
@@ -204,12 +224,24 @@ class CommunityLibraryService:
         Returns:
             List of all macros
         """
-        all_macros = []
         categories = self.get_categories(force_refresh=force_refresh)
+        if not categories:
+            return []
+            
+        all_macros = []
         
-        for category in categories:
-            macros = self.get_macros_in_category(category, force_refresh=force_refresh)
-            all_macros.extend(macros)
+        # Parallelize fetching of macros across categories
+        with ThreadPoolExecutor(max_workers=min(10, len(categories))) as executor:
+            future_to_category = {
+                executor.submit(self.get_macros_in_category, category, force_refresh): category
+                for category in categories
+            }
+            for future in as_completed(future_to_category):
+                try:
+                    category_macros = future.result()
+                    all_macros.extend(category_macros)
+                except Exception as e:
+                    logger.error(f"Error fetching macros in parallel for category: {e}")
         
         # Sort
         if sort_by == 'name':
@@ -310,7 +342,7 @@ class CommunityLibraryService:
                     return {"status": "error", "message": "Invalid macro data: Missing actions, command, or path"}
 
             # Send to Webhook
-            response = requests.post(submission_url, json=macro_data, timeout=15)
+            response = self.session.post(submission_url, json=macro_data, timeout=15)
             
             if response.status_code in [200, 201]:
                 logger.info("Submission successful via webhook")

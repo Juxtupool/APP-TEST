@@ -106,6 +106,14 @@ class MacroMixin:
         """Handle serial command with proper error handling."""
         try:
             if message in ["KNOB_LEFT", "KNOB_RIGHT", "KNOB_PRESS"]:
+                # Apply knob direction reversal if enabled in config
+                knob_config = self._config.get("knob", {})
+                if knob_config.get("reverse_direction", False):
+                    if message == "KNOB_LEFT":
+                        message = "KNOB_RIGHT"
+                    elif message == "KNOB_RIGHT":
+                        message = "KNOB_LEFT"
+                
                 self._knob_controller.handle_input(message)
                 return
 

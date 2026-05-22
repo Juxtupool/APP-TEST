@@ -2611,3 +2611,8 @@ if (btnProfileDropdown && dropdownProfile) {
         }
     });
 }
+
+// Expose key UI functions to window for legacy scripts/modules
+window.updateUIForProfile = updateUIForProfile;
+window.updateMacroList = updateMacroList;
+

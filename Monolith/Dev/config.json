@@ -15,7 +15,8 @@
         "current_version": "2.1.0"
     },
     "knob": {
-        "app_switcher_release_delay": 0.35
+        "app_switcher_release_delay": 0.35,
+        "reverse_direction": false
     },
     "debounce": {
         "serial_read_sleep": 0.01

@@ -18,18 +18,33 @@ import winerror
 logger = logging.getLogger(__name__)
 
 def create_icon(connected=False):
+    icon_path = Path(__file__).parent.parent / "Icon" / "Logo.png"
+    try:
+        if icon_path.exists():
+            base = Image.open(icon_path).convert("RGBA")
+            base = base.resize((64, 64), Image.Resampling.LANCZOS)
+            
+            image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
+            image.paste(base, (0, 0))
+            
+            dc = ImageDraw.Draw(image)
+            status_color = (0, 255, 0, 255) if connected else (128, 128, 128, 255)
+            margin = 4
+            dot_radius = 6
+            width, height = 64, 64
+            dc.ellipse([width - margin - dot_radius*2, height - margin - dot_radius*2, 
+                        width - margin, height - margin], fill=status_color)
+            return image
+    except Exception as e:
+        logger.error(f"Error loading icon: {e}")
 
-    # Create a dynamic icon with status indicator
+    # Fallback
     width = 64
     height = 64
     image = Image.new('RGB', (width, height), (0, 0, 0))
     dc = ImageDraw.Draw(image)
-    # White border
     dc.rectangle((0, 0, width-1, height-1), outline="white", width=2)
-    # White dot in center
     dc.rectangle((24, 24, 40, 40), fill="white")
-    
-    # Status indicator (dot in bottom right)
     status_color = (0, 255, 0) if connected else (128, 128, 128)
     margin = 8
     dot_radius = 8
@@ -394,13 +409,18 @@ def main():
             # 0. Remove Title Text
             win32gui.SetWindowText(hwnd, "")
             
-            # 0.5 Remove Icon
+            # 0.5 Update Icon
             try:
-                assets_dir = Path(__file__).parent / "assets"
-                icon_path = str(assets_dir / "transparent.ico")
-                if not os.path.exists(icon_path):
-                    img = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
+                import tempfile
+                logo_path = Path(__file__).parent.parent / "Icon" / "Logo.png"
+                icon_path = os.path.join(tempfile.gettempdir(), 'overcontrol_logo.ico')
+                if os.path.exists(logo_path) and not os.path.exists(icon_path):
+                    img = Image.open(logo_path)
                     img.save(icon_path, format='ICO')
+                elif not os.path.exists(logo_path):
+                    if not os.path.exists(icon_path):
+                        img = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
+                        img.save(icon_path, format='ICO')
                 
                 h_icon_small = win32gui.LoadImage(0, icon_path, win32con.IMAGE_ICON, win32api.GetSystemMetrics(win32con.SM_CXSMICON), win32api.GetSystemMetrics(win32con.SM_CYSMICON), win32con.LR_LOADFROMFILE)
                 if h_icon_small: win32gui.SendMessage(hwnd, 0x0080, 0, h_icon_small)

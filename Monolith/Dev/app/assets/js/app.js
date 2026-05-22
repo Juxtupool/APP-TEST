@@ -148,6 +148,10 @@ function setupKnobActions() {
         });
     });
 
+    document.getElementById('chk-knob-reverse').addEventListener('change', async (e) => {
+        await pywebview.api.set_knob_reverse(e.target.checked);
+    });
+
     document.querySelectorAll('.action-create-macro').forEach(btn => {
         btn.addEventListener('click', () => openMacroEditor());
     });
@@ -463,7 +467,7 @@ function showPage(pageId) {
     document.querySelector(`.nav-item[data-page="${pageId}"]`).classList.add('active');
 
     const titles = {
-        'keys': 'Key Configuration',
+        'keys': 'Key Map',
         'knob': 'Knob Configuration',
         'settings': 'Settings',
         'community': 'Macro Hub'
@@ -733,6 +737,10 @@ async function loadSettings() {
 
         const tray = await pywebview.api.get_tray_status();
         document.getElementById('chk-tray').checked = tray.enabled;
+
+        const knobReverse = await pywebview.api.get_knob_reverse();
+        const chkKnobReverse = document.getElementById('chk-knob-reverse');
+        if (chkKnobReverse) chkKnobReverse.checked = knobReverse.enabled;
 
         // Load Saved Custom Colors
         await loadSavedAccentColors();
@@ -2650,3 +2658,8 @@ if (btnProfileDropdown && dropdownProfile) {
         }
     });
 }
+
+// Expose key UI functions to window for legacy scripts/modules
+window.updateUIForProfile = updateUIForProfile;
+window.updateMacroList = updateMacroList;
+

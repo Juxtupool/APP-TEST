@@ -209,10 +209,12 @@ async function searchCommunityMacros(query) {
     displayCommunityMacros();
 }
 
+
+
 // Create macro card HTML
 function createMacroCard(macro) {
     const metadata = macro._metadata || {};
-    const category = metadata.category || 'other';
+    const category = (macro.category || metadata.category || 'other').toLowerCase();
     const tags = (macro.tags || []).slice(0, 3);
     const isProfile = macro.type === 'profile';
 
@@ -225,6 +227,7 @@ function createMacroCard(macro) {
         else if (category === 'creative') iconClass = 'fa-solid fa-palette';
         else if (category === 'gaming') iconClass = 'fa-solid fa-gamepad';
         else if (category === 'entertainment') iconClass = 'fa-solid fa-music';
+        else if (category === 'office') iconClass = 'fa-solid fa-folder-open';
     }
 
     // Safe encoding for data attribute
@@ -243,9 +246,9 @@ function createMacroCard(macro) {
 
     return `
         <div class="${cardClass}">
-            <div class="community-badge" ${isProfile ? 'style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;"' : ''}>${isProfile ? 'Profile' : 'Macro'}</div>
+            <div class="community-badge ${isProfile ? 'badge-profile' : ''}">${isProfile ? 'Profile' : 'Macro'}</div>
             <div class="macro-card-header">
-                <div class="macro-card-icon" ${isProfile ? 'style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);"' : ''}>
+                <div class="macro-card-icon ${isProfile ? 'profile' : category}">
                     <i class="${iconClass}"></i>
                 </div>
                 <div class="macro-card-info">
@@ -262,30 +265,28 @@ function createMacroCard(macro) {
                     ${tags.map(tag => `<span class="macro-tag">#${escapeHtml(tag)}</span>`).join('')}
                 </div>
             ` : ''}
+            <div class="macro-card-stats">
+                <div class="macro-stat" title="Downloads">
+                    <i class="fa-solid fa-download"></i>
+                    <span>${macro.downloads || 0}</span>
+                </div>
+                <div class="macro-stat" title="Stars">
+                    <i class="fa-solid fa-star"></i>
+                    <span>${likes}</span>
+                </div>
+                <div class="macro-stat" title="Uploaded">
+                    <i class="fa-solid fa-calendar"></i>
+                    <span>${dateStr}</span>
+                </div>
+            </div>
             <div class="macro-card-footer">
-                <div class="macro-card-stats">
-                    <div class="macro-stat" title="Downloads">
-                        <i class="fa-solid fa-download"></i>
-                        <span>${macro.downloads || 0}</span>
-                    </div>
-                    <div class="macro-stat" style="margin-left: 12px;" title="Stars">
-                        <i class="fa-solid fa-star"></i>
-                        <span>${likes}</span>
-                    </div>
-                    <div class="macro-stat" style="margin-left: 12px;" title="Uploaded">
-                        <i class="fa-solid fa-calendar" style="font-size: 0.7rem;"></i>
-                        <span style="font-size: 0.75rem;">${dateStr}</span>
-                    </div>
-                </div>
-                <div class="macro-card-actions" style="display: flex; gap: 8px;">
-                    <button class="macro-card-btn-icon" title="Star this macro" style="padding: 6px 10px; background: rgba(255,255,255,0.1); border-radius: 6px; border:none; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-regular fa-star"></i>
-                    </button>
-                    <button class="macro-card-btn ${isProfile ? 'btn-profile' : ''}" data-macro="${macroJson}" ${isProfile ? 'style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);"' : ''}>
-                        <i class="fa-solid ${buttonIcon}"></i>
-                        ${buttonText}
-                    </button>
-                </div>
+                <button class="macro-card-btn-icon" title="Star this macro">
+                    <i class="fa-regular fa-star"></i>
+                </button>
+                <button class="macro-card-btn ${isProfile ? 'btn-profile' : ''}" data-macro="${macroJson}">
+                    <i class="fa-solid ${buttonIcon}"></i>
+                    ${buttonText}
+                </button>
             </div>
         </div>
     `;
@@ -300,15 +301,23 @@ async function installCommunityMacro(macroData) {
             if (result.type === 'profile') {
                 await showAlert("", `Installed profile "${result.name}" and switched to it!`, "success");
                 // Refresh profiles
-                if (typeof loadProfiles === 'function') {
+                if (typeof window.loadProfiles === 'function') {
+                    await window.loadProfiles();
+                } else if (typeof loadProfiles === 'function') {
                     await loadProfiles();
                 } else {
                     location.reload(); // Fallback if loadProfiles isn't available in scope
                 }
             } else {
                 await showAlert("", `Installed "${result.name}" to your library!`, "success");
-                // Refresh macro list
-                if (typeof updateMacroList === 'function') {
+                // Refresh profiles first so the new macro is loaded into memory, which automatically updates the list
+                if (typeof window.loadProfiles === 'function') {
+                    await window.loadProfiles();
+                } else if (typeof loadProfiles === 'function') {
+                    await loadProfiles();
+                } else if (typeof window.updateMacroList === 'function') {
+                    window.updateMacroList();
+                } else if (typeof updateMacroList === 'function') {
                     updateMacroList();
                 }
             }
