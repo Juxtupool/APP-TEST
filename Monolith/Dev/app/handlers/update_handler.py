@@ -1,9 +1,11 @@
 import logging
 import json
+from app.core import safe_api, ApiResponse
 
 logger = logging.getLogger(__name__)
 
 class UpdateMixin:
+    @safe_api
     def check_for_updates(self):
         """Check GitHub for both Firmware and App updates."""
         try:
@@ -19,6 +21,7 @@ class UpdateMixin:
             logger.error(f"Error checking updates: {e}")
             return {"status": "error", "message": str(e)}
 
+    @safe_api
     def check_firmware_updates(self):
         """Check specifically for firmware updates."""
         try:
@@ -28,6 +31,7 @@ class UpdateMixin:
             logger.error(f"Error checking firmware updates: {e}")
             return {"status": "error", "message": str(e)}
 
+    @safe_api
     def check_app_updates(self):
         """Check specifically for app updates."""
         try:
@@ -36,18 +40,21 @@ class UpdateMixin:
             logger.error(f"Error checking app updates: {e}")
             return {"status": "error", "message": str(e)}
 
+    @safe_api
     def download_app_update(self, download_url):
         """Download app update using UpdateManager."""
         return self._update_manager.download_update(download_url)
 
+    @safe_api
     def trigger_app_restart(self):
         """Trigger non-blocking restart sequence."""
         return self._update_manager.trigger_restart()
     
+    @safe_api
     def download_firmware_update(self, download_url: str):
         """Download firmware update from GitHub."""
         try:
-            save_path = self._app_root / "firmware" / "update.bin"
+            save_path = self._app_root / "firmware" / "update.uf2"
             success = self._firmware_update_service.download_firmware(download_url, save_path)
             
             if success:
@@ -58,19 +65,23 @@ class UpdateMixin:
             logger.error(f"Error downloading firmware: {e}")
             return {"status": "error", "message": str(e)}
             
+    @safe_api
     def get_firmware_version(self):
         return {"status": "success", "version": self.firmware_version}
 
+    @safe_api
     def get_app_version(self):
         from ..version import APP_VERSION
         return {"status": "success", "version": APP_VERSION}
 
+    @safe_api
     def select_firmware_file(self):
-        result = self._window.create_file_dialog(self._webview.OPEN_DIALOG, file_types=("Bin Files (*.bin)", "All Files (*.*)"))
+        result = self._window.create_file_dialog(self._webview.OPEN_DIALOG, file_types=("UF2 Files (*.uf2)", "Bin Files (*.bin)", "All Files (*.*)"))
         if result and len(result) > 0:
             return {"status": "success", "path": result[0]}
         return {"status": "cancelled"}
 
+    @safe_api
     def flash_firmware(self, port, file_path):
         from ..services.flasher_service import FlasherService
         import serial.tools.list_ports

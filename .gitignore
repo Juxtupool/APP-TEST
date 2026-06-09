@@ -1,0 +1,16 @@
+# Environment / Tooling-specific files
+.agents/
+.vscode/
+.wrangler/
+skills-lock.json
+
+# Python-specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini

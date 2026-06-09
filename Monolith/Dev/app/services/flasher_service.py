@@ -1,9 +1,11 @@
-import esptool
 import logging
 import threading
 import sys
-from io import StringIO
 import time
+import os
+import shutil
+import serial
+import win32api
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +16,9 @@ class FlasherService:
         self.is_flashing = False
         self._cancel_flag = False
 
-    def flash(self, port, firmware_path, baud=460800):
+    def flash(self, port, firmware_path, baud=115200):
         """
-        Flash firmware to ESP32 using esptool.
-        Blocking call (runs in its own thread usually).
+        Flash firmware to RP2040 using USB Mass Storage UF2 bootloading.
         """
         if self.is_flashing:
             return False, "Already flashing"
@@ -26,85 +27,78 @@ class FlasherService:
         self._cancel_flag = False
         
         try:
-            logger.info(f"Starting flash on {port} with {firmware_path}")
+            logger.info(f"Starting RP2040 flash process on {port} with {firmware_path}")
             
-            # Use esptool.main() but capture output to parse progress?
-            # esptool is tricky to capture progress from because it prints to stdout directly.
-            # We can run it as a subprocess or try to hook into it. 
-            # Subprocess is safer for blocking/GIL reasons.
-            
-            import subprocess
-            
-            cmd = [
-                sys.executable, "-m", "esptool",
-                "--chip", "auto",
-                "--port", port,
-                "--baud", str(baud),
-                "--before", "default_reset",
-                "--after", "hard_reset",
-                "write_flash", "-z",
-                # ESP8266 usually flashes at 0x0000, ESP32 at 0x1000. 
-                # "0x0000" is safer for auto. NodeMCU (ESP8266) needs 0x0000.
-                "0x0000", firmware_path
-            ]
-            
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                bufsize=1
-            )
-            
-            output_log = []
-            
-            for line in process.stdout:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                output_log.append(line)
-                logger.debug(f"ESPTOOL: {line}")
-                
-                if self.on_progress:
-                     # Heuristic progress parsing
-                     if "%" in line and "(" in line:
-                         try:
-                             parts = line.split("(")
-                             last_part = parts[-1] 
-                             if ")" in last_part:
-                                 pct_str = last_part.split(")")[0].replace("%", "").strip()
-                                 pct = int(pct_str)
-                                 self.on_progress(f"Flashing: {pct}%", pct)
-                         except:
-                             pass
-                     elif "Erasing" in line:
-                         self.on_progress("Erasing flash...", 0)
-                     elif "Compressed" in line:
-                         self.on_progress("Writing...", 5)
-                     elif "Connecting" in line:
-                         self.on_progress("Connecting to device...", 2)
+            if self.on_progress:
+                self.on_progress("Resetting device into bootloader mode...", 10)
 
+            # 1. Reset RP2040 into BOOTSEL mode via 1200 baud trick
+            try:
+                ser = serial.Serial(port, 1200)
+                ser.close()
+                logger.info("Sent 1200 baud reset to bootloader")
+            except Exception as e:
+                logger.warning(f"Could not perform 1200 baud reset on {port}: {e}. Device might already be in BOOTSEL mode.")
+
+            if self.on_progress:
+                self.on_progress("Waiting for RPI-RP2 USB drive...", 30)
+
+            # 2. Polling for RPI-RP2 volume to mount
+            drive = None
+            for _ in range(30):
                 if self._cancel_flag:
-                    process.terminate()
                     self.is_flashing = False
                     return False, "Cancelled"
 
-            process.wait()
-            
-            if process.returncode == 0:
-                logger.info("Flash completed successfully")
-                if self.on_finished:
-                    self.on_finished(True, "Flash successful! Device restarting...")
-                return True, "Success"
-            else:
-                # Use the last few lines of log as the error message
-                last_lines = "; ".join(output_log[-3:]) if output_log else "Unknown error"
-                err_msg = f"Esptool failed (code {process.returncode}): {last_lines}"
+                try:
+                    drives_str = win32api.GetLogicalDriveStrings()
+                    drives = [d for d in drives_str.split('\x00') if d]
+                    for d in drives:
+                        try:
+                            vol_name = win32api.GetVolumeInformation(d)[0]
+                            if vol_name == "RPI-RP2":
+                                drive = d
+                                break
+                        except Exception:
+                            pass
+                except Exception as e:
+                    logger.debug(f"Error checking drives: {e}")
+
+                if drive:
+                    break
+                time.sleep(0.5)
+
+            if not drive:
+                err_msg = "RP2040 Bootloader drive (RPI-RP2) not found. Please verify connection or press BOOTSEL button."
                 logger.error(err_msg)
                 if self.on_finished:
                     self.on_finished(False, err_msg)
                 return False, err_msg
+
+            if self.on_progress:
+                self.on_progress("Copying firmware to device...", 70)
+
+            # 3. Copy the UF2 firmware file to the mounted drive
+            if self._cancel_flag:
+                self.is_flashing = False
+                return False, "Cancelled"
+
+            try:
+                shutil.copy(firmware_path, drive)
+                logger.info(f"Successfully copied {firmware_path} to {drive}")
+            except Exception as e:
+                err_msg = f"Failed to copy firmware file: {e}"
+                logger.error(err_msg)
+                if self.on_finished:
+                    self.on_finished(False, err_msg)
+                return False, err_msg
+
+            if self.on_progress:
+                self.on_progress("Flash completed successfully!", 100)
+
+            if self.on_finished:
+                self.on_finished(True, "Flash successful! Device restarting...")
+            return True, "Success"
 
         except Exception as e:
             logger.error(f"Flash exception: {e}")

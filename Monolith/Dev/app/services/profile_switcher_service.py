@@ -33,6 +33,12 @@ class ProfileSwitcherService:
         self.last_manual_profile = None
         self.current_auto_profile = None
         
+        # Store our own app process name to ignore self-focus events
+        try:
+            self.app_process_name = psutil.Process().name().lower()
+        except Exception:
+            self.app_process_name = "overcontrol.exe"
+            
         logger.info(f"ProfileSwitcherService initialized. Enabled: {self.enabled}, Rules: {len(self.rules)}")
 
     def notify_manual_switch(self, profile_name: str):
@@ -89,6 +95,11 @@ class ProfileSwitcherService:
                 if self.enabled:
                     current_process = self.get_active_process_name()
                     
+                    # Ignore if the active process is our own app
+                    if current_process and current_process.lower() == self.app_process_name:
+                        time.sleep(self.check_interval)
+                        continue
+                        
                     if current_process != self.last_process:
                         target_profile = self.should_switch_profile(current_process)
                         

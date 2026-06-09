@@ -1,8 +1,13 @@
+#include <Keyboard.h>
+#include <USB.h>
+
+// ===========================================
+// FIRMWARE VERSION
 // ============================================
-// FIRMWARE VERSION - UPDATE WITH EACH RELEASE
-// ============================================
-const char FIRMWARE_VERSION[] PROGMEM = "1.1.2";
+const char FIRMWARE_VERSION[] = "2.1.0"; // Renamed to Overcontrol. Enabled Keyboard HID for icon.
 // Version History:
+// 2.1.0 - Renamed to Overcontrol. Enabled Keyboard HID for icon.
+// 2.0.0 - Migrated to RP2040-Zero. GPIO 0-5 for switches, GPIO 6-8 for rotary encoder.
 // 1.1.2 - Optimized: Eliminated heap allocations, consolidated debounce logic
 // 1.1.1 - Added robust stable-state debouncing, increased delay to 50ms
 // 1.1.0 - Fixed GPIO0 spurious key presses, added startup grace period
@@ -12,43 +17,27 @@ const char FIRMWARE_VERSION[] PROGMEM = "1.1.2";
 const int numKeys = 6;
 
 // Key Configuration
-// Robust Pin Mapping to avoid "Ghosting" and Boot issues:
-// D0 (16) and D8 (15): Active HIGH (Wire to 3.3V). Internal Pull-down used.
-// D1, D2, D3, D4, D7: Active LOW (Wire to GND). Internal Pull-up used.
-
 struct KeyConfig {
   int pin;
-  int activeState; // LOW = GND, HIGH = 3.3V
+  int activeState; // LOW = GND
 };
 
 KeyConfig keys[numKeys] = {
-  {0, LOW},   // Key 1: D3 (Active LOW)
-  {2, LOW},   // Key 2: D4 (Active LOW)
-  {4, LOW},   // Key 3: D2 (Active LOW)
-  {15, HIGH}, // Key 4: D8 (Active HIGH)
-  {5, LOW},   // Key 5: D1 (Active LOW)
-  {16, HIGH}  // Key 6: D0 (Active HIGH)
+  {0, LOW}, {1, LOW}, {2, LOW}, {3, LOW}, {4, LOW}, {5, LOW}
 };
 
 // Rotary Encoder Pins
-const int CLK_PIN = 14; // D5
-const int DT_PIN = 12;  // D6
-const int SW_PIN = 13;  // D7 (Active LOW)
-
+const int CLK_PIN = 6;
+const int DT_PIN = 7;
+const int SW_PIN = 8;
 int lastCLKState;
-int currentCLKState;
-
-// --- Timing Constants ---
-const unsigned long debounceDelay = 50; // Debounce delay in ms
-const unsigned long ACTIVE_DELAY = 1;   // Loop delay when active (ms)
-const unsigned long IDLE_DELAY = 10;    // Loop delay when idle (ms)
 
 // --- Debounce State Arrays ---
+const unsigned long debounceDelay = 50;
 int lastKeyReading[numKeys];
 bool keyState[numKeys];
 unsigned long lastKeyDebounceTime[numKeys];
 
-// --- Knob Button Debounce State ---
 int lastKnobReading = HIGH;
 bool knobState = false;
 unsigned long lastKnobDebounceTime = 0;
@@ -57,39 +46,27 @@ unsigned long lastKnobDebounceTime = 0;
 // HELPER FUNCTIONS
 // ============================================
 
-/**
- * Check button debounce state and return true on press event
- * Consolidates debounce logic for reusability
- */
 bool checkButtonDebounce(int reading, int& lastReading, bool& state,
-                        unsigned long& lastTime, int activeState,
-                        unsigned long currentTime) {
-    if (reading != lastReading) {
-        lastTime = currentTime;
+                         unsigned long& lastTime, int activeState,
+                         unsigned long currentTime) {
+  if (reading != lastReading) {
+    lastTime = currentTime;
+  }
+  if ((currentTime - lastTime) > debounceDelay) {
+    bool isPressed = (reading == activeState);
+    if (isPressed != state) {
+      state = isPressed;
+      lastReading = reading;
+      return isPressed;
     }
-    
-    if ((currentTime - lastTime) > debounceDelay) {
-        bool isPressed = (reading == activeState);
-        if (isPressed != state) {
-            state = isPressed;
-            lastReading = reading;
-            return isPressed;  // Return true only on press
-        }
-    }
-    
-    lastReading = reading;
-    return false;
+  }
+  lastReading = reading;
+  return false;
 }
 
-/**
- * Send version string from PROGMEM
- */
 void sendVersion() {
-    Serial.print(F("VERSION_"));
-    // Read from PROGMEM
-    char buffer[10];
-    strcpy_P(buffer, FIRMWARE_VERSION);
-    Serial.println(buffer);
+  Serial.print("VERSION_");
+  Serial.println(FIRMWARE_VERSION);
 }
 
 // ============================================
@@ -97,38 +74,25 @@ void sendVersion() {
 // ============================================
 
 void setup() {
+  USB.setManufacturer("Overcontrol");
+  USB.setProduct("OverControl Monolith");
+  
   Serial.begin(115200);
+  Keyboard.begin();
 
-  // Initialize the key pins
   for (int i = 0; i < numKeys; i++) {
-    if (keys[i].activeState == LOW) {
-      pinMode(keys[i].pin, INPUT_PULLUP);
-    } else {
-      if (keys[i].pin == 16) {
-        pinMode(16, INPUT_PULLDOWN_16);
-      } else {
-        pinMode(keys[i].pin, INPUT);
-      }
-    }
-    
-    // Initialize state
+    pinMode(keys[i].pin, INPUT_PULLUP);
     lastKeyReading[i] = digitalRead(keys[i].pin);
-    bool pressed = (lastKeyReading[i] == keys[i].activeState);
-    keyState[i] = pressed;
+    keyState[i] = (lastKeyReading[i] == keys[i].activeState);
     lastKeyDebounceTime[i] = 0;
   }
 
-  // Initialize Rotary Encoder pins
-  pinMode(CLK_PIN, INPUT);
-  pinMode(DT_PIN, INPUT);
+  pinMode(CLK_PIN, INPUT_PULLUP);
+  pinMode(DT_PIN, INPUT_PULLUP);
   pinMode(SW_PIN, INPUT_PULLUP);
-
   lastCLKState = digitalRead(CLK_PIN);
-  
-  // Startup grace period
+
   delay(100);
-  
-  // Send firmware version
   sendVersion();
 }
 
@@ -140,56 +104,48 @@ void loop() {
   unsigned long currentTime = millis();
   bool anyActivity = false;
 
-  // --- Scan Keys with Debounce ---
+  // --- Serial Command Handling ---
+  if (Serial.available() > 0) {
+    String incoming = Serial.readStringUntil('\n');
+    incoming.trim();
+
+    if (incoming == "GET_VERSION") {
+      sendVersion();
+    } 
+  }
+
+  // --- Scan Keys ---
   for (int i = 0; i < numKeys; i++) {
     int reading = digitalRead(keys[i].pin);
-    
-    // Track activity
-    if (reading != lastKeyReading[i]) {
-      anyActivity = true;
-    }
-    
-    // Check for key press event using consolidated debounce function
+    if (reading != lastKeyReading[i]) anyActivity = true;
+
     if (checkButtonDebounce(reading, lastKeyReading[i], keyState[i],
-                           lastKeyDebounceTime[i], keys[i].activeState, currentTime)) {
-      // KEY PRESSED EVENT - send without String allocation
-      Serial.print(F("KEY_"));
-      Serial.print(i + 1);
-      Serial.println(F("_PRESSED"));
+                            lastKeyDebounceTime[i], keys[i].activeState, currentTime)) {
+      Serial.print("KEY_"); Serial.print(i + 1); Serial.println("_PRESSED");
       anyActivity = true;
     }
   }
 
   // --- Rotary Encoder ---
-  currentCLKState = digitalRead(CLK_PIN);
-
+  int currentCLKState = digitalRead(CLK_PIN);
   if (currentCLKState != lastCLKState && currentCLKState == 1) {
     anyActivity = true;
     if (digitalRead(DT_PIN) != currentCLKState) {
-      Serial.println(F("KNOB_RIGHT"));
+      Serial.println("KNOB_RIGHT");
     } else {
-      Serial.println(F("KNOB_LEFT"));
+      Serial.println("KNOB_LEFT");
     }
   }
   lastCLKState = currentCLKState;
 
-  // --- Encoder Button Debounce ---
+  // --- Encoder Button ---
   int knobReading = digitalRead(SW_PIN);
-  
-  if (knobReading != lastKnobReading) {
-    anyActivity = true;
-  }
-  
+  if (knobReading != lastKnobReading) anyActivity = true;
   if (checkButtonDebounce(knobReading, lastKnobReading, knobState,
-                         lastKnobDebounceTime, LOW, currentTime)) {
-    Serial.println(F("KNOB_PRESS"));
+                          lastKnobDebounceTime, LOW, currentTime)) {
+    Serial.println("KNOB_PRESS");
     anyActivity = true;
   }
-  
-  // CPU optimization: adaptive delay
-  if (anyActivity) {
-    delay(ACTIVE_DELAY);
-  } else {
-    delay(IDLE_DELAY);
-  }
+
+  delay(anyActivity ? 1 : 10);
 }

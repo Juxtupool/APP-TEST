@@ -2,8 +2,8 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Overcontrol"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "Juxtupool"
+#define MyAppVersion "1.0.5"
+#define MyAppPublisher "Overcontrol"
 #define MyAppURL "https://github.com/Juxtupool/APP-TEST"
 #define MyAppExeName "Overcontrol.exe"
 #define SourceDir "dist\Overcontrol"
@@ -28,6 +28,7 @@ OutputBaseFilename=Overcontrol_Setup_v{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=Icon\Logo.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -78,33 +79,67 @@ begin
 end;
 
 var
-  DotCount: Integer;
-  LastDotTick: DWord;
+  DownloadStartTick: DWord;
 
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
 var
-  Dots: String;
-  i: Integer;
+  ElapsedMs: DWord;
+  SpeedBytesPerSec: Int64;
+  SpeedMB, SpeedMBFrac, SpeedKB, SpeedKBFrac: Int64;
+  TransferredMB, TransferredFrac, TotalMB, TotalFrac: Int64;
+  Percent: Integer;
+  SpeedStr: String;
+  ProgressStr: String;
 begin
-  if GetTickCount - LastDotTick > 500 then
+  ElapsedMs := GetTickCount - DownloadStartTick;
+  if ElapsedMs = 0 then ElapsedMs := 1; // Avoid division by zero
+  
+  // Speed in Bytes/sec
+  SpeedBytesPerSec := (Progress * 1000) / ElapsedMs;
+  
+  if SpeedBytesPerSec > 1024 * 1024 then
   begin
-    DotCount := (DotCount + 1) mod 4;
-    LastDotTick := GetTickCount;
-    
-    Dots := '';
-    for i := 1 to DotCount do Dots := Dots + '.';
-    
-    DownloadPage.SetText('Downloading Microsoft Edge WebView2 Runtime' + Dots, 'This might take a while. Please wait.');
+    SpeedMB := SpeedBytesPerSec / (1024 * 1024);
+    SpeedMBFrac := ((SpeedBytesPerSec mod (1024 * 1024)) * 100) / (1024 * 1024);
+    SpeedStr := Format('%d.%02d MB/s', [SpeedMB, SpeedMBFrac]);
+  end
+  else if SpeedBytesPerSec > 1024 then
+  begin
+    SpeedKB := SpeedBytesPerSec / 1024;
+    SpeedKBFrac := ((SpeedBytesPerSec mod 1024) * 10) / 1024;
+    SpeedStr := Format('%d.%d KB/s', [SpeedKB, SpeedKBFrac]);
+  end
+  else
+  begin
+    SpeedStr := Format('%d B/s', [SpeedBytesPerSec]);
   end;
   
-  // Keep progress at 50%
-  DownloadPage.SetProgress(50, 100);
+  TransferredMB := Progress / (1024 * 1024);
+  TransferredFrac := ((Progress mod (1024 * 1024)) * 100) / (1024 * 1024);
+  
+  if ProgressMax > 0 then
+  begin
+    TotalMB := ProgressMax / (1024 * 1024);
+    TotalFrac := ((ProgressMax mod (1024 * 1024)) * 100) / (1024 * 1024);
+    Percent := (Progress * 100) / ProgressMax;
+    
+    ProgressStr := Format('Downloaded %d.%02d MB of %d.%02d MB (%d%%) at %s', [TransferredMB, TransferredFrac, TotalMB, TotalFrac, Percent, SpeedStr]);
+    DownloadPage.SetProgress(Progress, ProgressMax);
+  end
+  else
+  begin
+    ProgressStr := Format('Downloaded %d.%02d MB at %s', [TransferredMB, TransferredFrac, SpeedStr]);
+    DownloadPage.SetProgress(Progress mod 100, 100);
+  end;
+  
+  DownloadPage.SetText('Downloading Microsoft Edge WebView2 Runtime...', ProgressStr);
   Result := True;
 end;
 
 procedure InitializeWizard;
 begin
   DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
+  DownloadPage.AbortButton.Visible := False;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -127,10 +162,11 @@ begin
     WizardForm.CancelButton.Visible := False;
     try
       try
-        DownloadPage.SetText('Downloading Microsoft Edge WebView2 Runtime...', 'This might take a while. Please wait.');
+        DownloadStartTick := GetTickCount;
+        DownloadPage.SetText('Downloading Microsoft Edge WebView2 Runtime...', 'Starting download...');
         DownloadPage.Download;
         
-        DownloadPage.SetText('Installing WebView2 Runtime...', '(May take a while. Please wait)');
+        DownloadPage.SetText('Installing WebView2 (Microsoft System component)...', 'Please wait...');
         DownloadPage.SetProgress(50, 100);
         
         // Run the bootstrapper silently

@@ -58,10 +58,51 @@ class CommunityLibraryService:
             'User-Agent': 'Overcontrol'
         }
         
-        if self.github_token:
-            headers['Authorization'] = f'token {self.github_token}'
+        # Read from config dict dynamically
+        token = self.config.get('github', {}).get('token', None)
+        if token:
+            headers['Authorization'] = f'token {token}'
         
         return headers
+
+    def _make_request(self, method: str, url: str, **kwargs) -> requests.Response:
+        """Make an HTTP request, retrying without auth headers if we get a 401 Unauthorized."""
+        if 'headers' not in kwargs:
+            kwargs['headers'] = self._get_headers()
+            
+        try:
+            if method.upper() == 'GET':
+                response = self.session.get(url, **kwargs)
+            elif method.upper() == 'POST':
+                response = self.session.post(url, **kwargs)
+            else:
+                raise ValueError(f"Unsupported method: {method}")
+        except Exception as e:
+            logger.error(f"HTTP request error: {e}")
+            raise e
+            
+        if response.status_code == 401:
+            has_auth = 'Authorization' in kwargs.get('headers', {})
+            if has_auth or self.config.get('github', {}).get('token'):
+                logger.warning("GitHub API returned 401 Unauthorized. The GITHUB_TOKEN is invalid/revoked. Clearing it and retrying request unauthenticated.")
+                if 'github' in self.config:
+                    self.config['github']['token'] = None
+                self.github_token = None
+                
+                # Update headers for retry (remove Authorization header)
+                headers = kwargs.get('headers', {}).copy()
+                headers.pop('Authorization', None)
+                kwargs['headers'] = headers
+                
+                # Retry
+                if method.upper() == 'GET':
+                    response = self.session.get(url, **kwargs)
+                elif method.upper() == 'POST':
+                    response = self.session.post(url, **kwargs)
+            else:
+                logger.warning("GitHub API returned 401 Unauthorized, but no GITHUB_TOKEN or Authorization header was present.")
+                
+        return response
     
     def get_categories(self, force_refresh: bool = False) -> List[str]:
         """
@@ -80,7 +121,7 @@ class CommunityLibraryService:
             url = f"{self.api_base}/macros"
             logger.info(f"Fetching categories from {url}")
             
-            response = self.session.get(url, headers=self._get_headers(), timeout=10)
+            response = self._make_request('GET', url, timeout=10)
             
             if response.status_code == 404:
                 logger.warning("Community repo or macros folder not found")
@@ -108,7 +149,7 @@ class CommunityLibraryService:
         """
         try:
             macro_url = f"{self.raw_base}/macros/{category}/{file['name']}"
-            macro_response = self.session.get(macro_url, headers=self._get_headers(), timeout=10)
+            macro_response = self._make_request('GET', macro_url, timeout=10)
             macro_response.raise_for_status()
             
             macro_data = macro_response.json()
@@ -147,7 +188,7 @@ class CommunityLibraryService:
             url = f"{self.api_base}/macros/{category}"
             logger.info(f"Fetching macros listing from {url}")
             
-            response = self.session.get(url, headers=self._get_headers(), timeout=10)
+            response = self._make_request('GET', url, timeout=10)
             response.raise_for_status()
             
             files = response.json()

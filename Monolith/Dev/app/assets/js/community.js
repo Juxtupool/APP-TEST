@@ -299,7 +299,7 @@ async function installCommunityMacro(macroData) {
 
         if (result.status === 'success') {
             if (result.type === 'profile') {
-                await showAlert("", `Installed profile "${result.name}" and switched to it!`, "success");
+                await showAlert("", `Profile <strong>"${result.name}"</strong> activated!`, "success");
                 // Refresh profiles
                 if (typeof window.loadProfiles === 'function') {
                     await window.loadProfiles();
@@ -309,7 +309,7 @@ async function installCommunityMacro(macroData) {
                     location.reload(); // Fallback if loadProfiles isn't available in scope
                 }
             } else {
-                await showAlert("", `Installed "${result.name}" to your library!`, "success");
+                await showAlert("", `Macro <strong>"${result.name}"</strong> added!`, "success");
                 // Refresh profiles first so the new macro is loaded into memory, which automatically updates the list
                 if (typeof window.loadProfiles === 'function') {
                     await window.loadProfiles();

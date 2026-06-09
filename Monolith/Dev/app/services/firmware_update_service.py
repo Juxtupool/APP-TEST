@@ -1,5 +1,7 @@
 import requests
 import logging
+import hashlib
+import re
 from pathlib import Path
 from typing import Dict, Optional
 from packaging import version as pkg_version
@@ -18,6 +20,7 @@ class FirmwareUpdateService:
         Args:
             config: Dictionary with github.firmware_repo, github.app_repo and current versions
         """
+        self.config = config
         self.firmware_repo = config.get('github', {}).get('firmware_repo', '')
         self.app_repo = config.get('github', {}).get('app_repo', '')
         
@@ -41,8 +44,10 @@ class FirmwareUpdateService:
             'User-Agent': 'Overcontrol'
         }
         
-        if self.github_token:
-            headers['Authorization'] = f'token {self.github_token}'
+        # Read from config dict dynamically
+        token = self.config.get('github', {}).get('token', None)
+        if token:
+            headers['Authorization'] = f'token {token}'
             logger.debug("Requesting with Authentication")
         else:
             logger.debug("Requesting Unauthenticated (Public Access)")
@@ -62,7 +67,16 @@ class FirmwareUpdateService:
         
         try:
             logger.info(f"Checking for updates at {api_url}")
-            response = requests.get(api_url, headers=self._get_headers(), timeout=10)
+            req_headers = self._get_headers()
+            response = requests.get(api_url, headers=req_headers, timeout=10)
+            
+            if response.status_code == 401:
+                if 'Authorization' in req_headers or self.config.get('github', {}).get('token'):
+                    logger.warning("GitHub API returned 401 Unauthorized in FirmwareUpdateService. Clearing token and retrying request.")
+                    if 'github' in self.config:
+                        self.config['github']['token'] = None
+                    self.github_token = None
+                    response = requests.get(api_url, headers=self._get_headers(), timeout=10)
             
             if response.status_code == 404:
                 return {'error': 'Repository not found or no releases available'}
@@ -90,8 +104,8 @@ class FirmwareUpdateService:
                     break
             
             # For App updates, we might not need a specific asset if we just want to notify
-            if not download_url and asset_extension == '.bin':
-                 return {'error': 'No firmware binary (.bin) found in latest release'}
+            if not download_url and asset_extension in ('.bin', '.uf2'):
+                 return {'error': f'No firmware binary ({asset_extension}) found in latest release'}
 
             # Compare versions
             try:
@@ -126,7 +140,7 @@ class FirmwareUpdateService:
         # Use passed version if valid. If None, fallback to config.
         # Ensure we keep "Unknown" if passed, to avoid falling back to stale config "1.0.0"
         ver = current_version if current_version is not None else self.current_firmware_version
-        return self._check_updates_generic(self.firmware_repo, ver, '.bin')
+        return self._check_updates_generic(self.firmware_repo, ver, '.uf2')
 
     def check_app_updates(self) -> Dict:
         """Check for app updates."""
@@ -151,7 +165,17 @@ class FirmwareUpdateService:
             save_path.parent.mkdir(parents=True, exist_ok=True)
             
             # Stream download for large files
-            response = requests.get(download_url, headers=self._get_headers(), stream=True, timeout=30)
+            req_headers = self._get_headers()
+            response = requests.get(download_url, headers=req_headers, stream=True, timeout=30)
+            
+            if response.status_code == 401:
+                if 'Authorization' in req_headers or self.config.get('github', {}).get('token'):
+                    logger.warning("GitHub API returned 401 Unauthorized in download_firmware. Clearing token and retrying request.")
+                    if 'github' in self.config:
+                        self.config['github']['token'] = None
+                    self.github_token = None
+                    response = requests.get(download_url, headers=self._get_headers(), stream=True, timeout=30)
+            
             response.raise_for_status()
             
             total_size = int(response.headers.get('content-length', 0))
@@ -167,6 +191,45 @@ class FirmwareUpdateService:
                         if downloaded % 102400 == 0 and total_size > 0:
                             progress = (downloaded / total_size) * 100
                             logger.debug(f"Download progress: {progress:.1f}%")
+            
+            # Calculate SHA-256 hash of the downloaded firmware
+            sha256_hash = hashlib.sha256()
+            with open(save_path, 'rb') as f:
+                for byte_block in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(byte_block)
+            calculated_hash = sha256_hash.hexdigest().lower()
+            
+            # Try to fetch expected SHA-256 hash from release assets (URL + .sha256 or .sha256.txt)
+            hash_found = False
+            expected_hash = None
+            
+            req_headers = self._get_headers()
+            
+            for suffix in [".sha256", ".sha256.txt"]:
+                sha_url = download_url + suffix
+                try:
+                    resp = requests.get(sha_url, headers=req_headers, timeout=10)
+                    if resp.status_code == 200:
+                        hash_text = resp.text.strip()
+                        match = re.match(r'^([a-fA-F0-9]{64})', hash_text)
+                        if match:
+                            expected_hash = match.group(1).lower()
+                            hash_found = True
+                            logger.info(f"Retrieved expected firmware hash from {sha_url}: {expected_hash}")
+                            break
+                except Exception as ex:
+                    logger.debug(f"Failed to check sha256 at {sha_url}: {ex}")
+                    
+            if hash_found:
+                if calculated_hash != expected_hash:
+                    logger.error(f"SHA-256 verification failed for firmware. Expected: {expected_hash}, Calculated: {calculated_hash}")
+                    if save_path.exists():
+                        save_path.unlink()
+                    return False
+                else:
+                    logger.info("Firmware SHA-256 integrity check passed.")
+            else:
+                logger.warning("No firmware SHA-256 verification file found in release. Proceeding without integrity check.")
             
             logger.info(f"Firmware downloaded successfully to {save_path}")
             return True

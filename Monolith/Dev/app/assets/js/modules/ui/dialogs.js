@@ -8,7 +8,12 @@ window.sanitizeHTML = (str) => {
     if (!str) return "";
     const temp = document.createElement('div');
     temp.textContent = str;
-    return temp.innerHTML.replace(/\n/g, '<br>');
+    return temp.innerHTML
+        .replace(/\n/g, '<br>')
+        .replace(/&lt;strong&gt;/g, '<strong>')
+        .replace(/&lt;\/strong&gt;/g, '</strong>')
+        .replace(/&lt;b&gt;/g, '<b>')
+        .replace(/&lt;\/b&gt;/g, '</b>');
 };
 
 window.Dialog = {

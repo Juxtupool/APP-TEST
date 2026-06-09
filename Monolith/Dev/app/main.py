@@ -17,8 +17,17 @@ import winerror
 
 logger = logging.getLogger(__name__)
 
+def get_resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = Path(sys._MEIPASS)
+    except AttributeError:
+        base_path = Path(__file__).parent.parent
+    return base_path / relative_path
+
 def create_icon(connected=False):
-    icon_path = Path(__file__).parent.parent / "Icon" / "Logo.png"
+    icon_path = get_resource_path("Icon/Logo.png")
     try:
         if icon_path.exists():
             base = Image.open(icon_path).convert("RGBA")
@@ -157,7 +166,23 @@ def shutdown_application(api, window, icon=None):
     try:
         print("Shutting down application...")
         
+        # Stop tray monitor loop
+        if api:
+            api.tray_loop_running = False
+        
         # 1. Stop background services
+        if hasattr(api, '_macro_recording_service'):
+            try:
+                api._macro_recording_service.stop_recording(is_emergency=True)
+            except Exception as e:
+                print(f"Error stopping macro recording on shutdown: {e}")
+
+        if hasattr(api, '_knob_controller'):
+            try:
+                api._knob_controller.finalize_app_switch()
+            except Exception as e:
+                print(f"Error finalising app switcher key holds: {e}")
+
         if hasattr(api, '_profile_switcher'):
             api._profile_switcher.stop()
             
@@ -186,7 +211,7 @@ def shutdown_application(api, window, icon=None):
         import time
         time.sleep(0.2)
             
-        # 4. Exit immediately to prevent tracebacks from child threads
+        # 4. Exit process cleanly after resource teardowns
         os._exit(0)
     except Exception as e:
         print(f"Error during shutdown: {e}")
@@ -252,7 +277,7 @@ def tray_loop(api):
     previous_ports = set()
     first_run = True
     
-    while True:
+    while getattr(api, 'tray_loop_running', True):
         try:
             connected = api.is_connected()
             ports = api.get_serial_ports()
@@ -264,7 +289,7 @@ def tray_loop(api):
             if not connected:
                 # Disconnected: Scan only NEW ports for Monolith (or generic RP2040) automatically
                 if not first_run:
-                    monolith = next((p for p in ports if p[0] in new_ports and any(s in (p[1] + str(p[2] if len(p) > 2 else '')).lower() for s in ['monolith', '2e8a:0002', '2e8a:0003'])), None)
+                    monolith = next((p for p in ports if p[0] in new_ports and any(s in (p[1] + str(p[2] if len(p) > 2 else '')).lower() for s in ['monolith', '2e8a:0002', '2e8a:0003', '1209:c550'])), None)
                     
                     if monolith:
                         logger.info(f"Tray Monitor: Found NEW device on {monolith[0]}, attempting auto-connect")
@@ -322,7 +347,7 @@ def main():
         logger.warning(f"Could not set dark theme for tray menu: {e}")
     
     # Path to index.html
-    assets_dir = Path(__file__).parent / "assets"
+    assets_dir = get_resource_path("app/assets")
     index_path = assets_dir / "index.html"
     
     if not index_path.exists():
@@ -381,11 +406,26 @@ def main():
 
     def on_closing():
         if api.tray_enabled:
+            if hasattr(api, '_macro_recording_service'):
+                try:
+                    api._macro_recording_service.stop_recording(is_emergency=True)
+                except Exception as e:
+                    print(f"Error stopping macro recording on window close: {e}")
             window.hide()
             return False 
         
         shutdown_application(api, window)
         return True 
+
+    def on_minimized():
+        logger.info("Window minimized: stopping active macro recording")
+        if hasattr(api, '_macro_recording_service'):
+            try:
+                api._macro_recording_service.stop_recording(is_emergency=True)
+            except Exception as e:
+                logger.error(f"Error stopping macro recording on minimize: {e}")
+
+    window.events.minimized += on_minimized
 
     # Startup Style Application
     def startup_style_application():
@@ -412,7 +452,7 @@ def main():
             # 0.5 Update Icon
             try:
                 import tempfile
-                logo_path = Path(__file__).parent.parent / "Icon" / "Logo.png"
+                logo_path = get_resource_path("Icon/Logo.png")
                 icon_path = os.path.join(tempfile.gettempdir(), 'overcontrol_logo.ico')
                 if os.path.exists(logo_path) and not os.path.exists(icon_path):
                     img = Image.open(logo_path)

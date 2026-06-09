@@ -1,9 +1,11 @@
 import logging
 from typing import Dict
+from app.core import safe_api, ApiResponse
 
 logger = logging.getLogger(__name__)
 
 class CommunityMixin:
+    @safe_api
     def get_community_categories(self):
         """Get list of community macro categories."""
         try:
@@ -13,6 +15,7 @@ class CommunityMixin:
             logger.error(f"Error fetching categories: {e}")
             return {"status": "error", "message": str(e)}
     
+    @safe_api
     def get_community_macros(self, category: str = None, search: str = None, force_refresh: bool = False):
         """Get community macros by category or search query."""
         try:
@@ -28,6 +31,7 @@ class CommunityMixin:
             logger.error(f"Error fetching macros: {e}")
             return {"status": "error", "message": str(e)}
     
+    @safe_api
     def install_community_macro(self, macro_data: Dict):
         """Install a community macro OR profile."""
         try:
@@ -85,6 +89,7 @@ class CommunityMixin:
             logger.error(f"Error installing item: {e}")
             return {"status": "error", "message": str(e)}
     
+    @safe_api
     def submit_community_macro(self, macro_data: Dict):
         """Submit a macro directly to the GitHub community repo."""
         try:

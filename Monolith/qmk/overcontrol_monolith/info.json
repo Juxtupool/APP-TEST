@@ -1,0 +1,42 @@
+{
+    "keyboard_name": "OverControl Monolith",
+    "url": "",
+    "maintainer": "OverControl",
+    "width": 8,
+    "height": 1,
+    "usb": {
+        "vid": "0xFEED",
+        "pid": "0x0001",
+        "device_version": "2.1.0"
+    },
+    "features": {
+        "encoder": true
+    },
+    "matrix_pins": {
+        "direct": [
+            ["GP0", "GP1", "GP2", "GP3", "GP4", "GP5", "GP8"]
+        ]
+    },
+    "encoder": {
+        "rotary": [
+            {
+                "pin_a": "GP6",
+                "pin_b": "GP7",
+                "resolution": 4
+            }
+        ]
+    },
+    "layouts": {
+        "LAYOUT_direct": {
+            "layout": [
+                {"label": "SW1", "x": 0, "y": 0, "matrix": [0, 0]},
+                {"label": "SW2", "x": 1, "y": 0, "matrix": [0, 1]},
+                {"label": "SW3", "x": 2, "y": 0, "matrix": [0, 2]},
+                {"label": "SW4", "x": 3, "y": 0, "matrix": [0, 3]},
+                {"label": "SW5", "x": 4, "y": 0, "matrix": [0, 4]},
+                {"label": "SW6", "x": 5, "y": 0, "matrix": [0, 5]},
+                {"label": "KNOB_SW", "x": 7, "y": 0, "matrix": [0, 6]}
+            ]
+        }
+    }
+}

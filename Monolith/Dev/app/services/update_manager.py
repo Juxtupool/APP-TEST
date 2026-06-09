@@ -8,6 +8,8 @@ import threading
 import logging
 import shutil
 import zipfile
+import hashlib
+import re
 from pathlib import Path
 from packaging import version as pkg_version
 from ..version import APP_VERSION
@@ -55,6 +57,14 @@ class UpdateManager:
             
             logger.info(f"Checking for app updates at {api_url}")
             resp = requests.get(api_url, headers=headers, timeout=10)
+            
+            if resp.status_code == 401:
+                if 'Authorization' in headers or self.config.get('github', {}).get('token'):
+                    logger.warning("GitHub API returned 401 Unauthorized in UpdateManager. Clearing token and retrying request.")
+                    if 'github' in self.config:
+                        self.config['github']['token'] = None
+                    headers.pop('Authorization', None)
+                    resp = requests.get(api_url, headers=headers, timeout=10)
             
             if resp.status_code != 200:
                  return {'status': 'error', 'message': f'GitHub API error: {resp.status_code}'}
@@ -137,6 +147,49 @@ class UpdateManager:
                 with open(save_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
+            
+            # Calculate SHA-256 hash of the downloaded package
+            sha256_hash = hashlib.sha256()
+            with open(save_path, 'rb') as f:
+                for byte_block in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(byte_block)
+            calculated_hash = sha256_hash.hexdigest().lower()
+            
+            # Try to fetch SHA-256 checksum from .sha256 or .sha256.txt
+            headers = {'User-Agent': 'Overcontrol'}
+            token = self.config.get('github', {}).get('token')
+            if token:
+                headers['Authorization'] = f'token {token}'
+                
+            hash_found = False
+            expected_hash = None
+            
+            for suffix in [".sha256", ".sha256.txt"]:
+                sha_url = url + suffix
+                try:
+                    resp = requests.get(sha_url, headers=headers, timeout=10)
+                    if resp.status_code == 200:
+                        hash_text = resp.text.strip()
+                        # Match first 64-hex-char word
+                        match = re.match(r'^([a-fA-F0-9]{64})', hash_text)
+                        if match:
+                            expected_hash = match.group(1).lower()
+                            hash_found = True
+                            logger.info(f"Retrieved expected hash from {sha_url}: {expected_hash}")
+                            break
+                except Exception as ex:
+                    logger.debug(f"Failed to check sha256 at {sha_url}: {ex}")
+                    
+            if hash_found:
+                if calculated_hash != expected_hash:
+                    logger.error(f"SHA-256 verification failed for {filename}. Expected: {expected_hash}, Calculated: {calculated_hash}")
+                    if save_path.exists():
+                        os.remove(save_path)
+                    return {'status': 'error', 'message': 'Update package integrity check failed (SHA-256 mismatch).'}
+                else:
+                    logger.info("SHA-256 integrity check passed.")
+            else:
+                logger.warning("No SHA-256 verification file found in release assets. Proceeding without integrity check.")
             
             # If it's a zip (Dev mode or Source), extract it
             if filename.endswith(".zip"):

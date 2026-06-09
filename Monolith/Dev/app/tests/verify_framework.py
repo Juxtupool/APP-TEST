@@ -61,6 +61,37 @@ class TestFramework(unittest.TestCase):
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["message"], "Custom Backend Error")
         self.assertEqual(result["code"], "BACKEND_ERROR")
+    def test_mixins_methods_decorated(self):
+        from app.handlers.profile_handler import ProfileMixin
+        from app.handlers.serial_handler import SerialMixin
+        from app.handlers.system_handler import SystemMixin
+        from app.handlers.community_handler import CommunityMixin
+        from app.handlers.icon_handler import IconMixin
+        from app.handlers.update_handler import UpdateMixin
+        from app.handlers.macro_handler import MacroMixin
+
+        mixins = [
+            ProfileMixin,
+            SerialMixin,
+            SystemMixin,
+            CommunityMixin,
+            IconMixin,
+            UpdateMixin,
+            MacroMixin
+        ]
+
+        for mixin in mixins:
+            for name in dir(mixin):
+                if name.startswith('_'):
+                    continue
+                member = getattr(mixin, name)
+                if callable(member):
+                    # Verify it has __wrapped__ (meaning safe_api decorated it)
+                    self.assertTrue(
+                        hasattr(member, '__wrapped__'),
+                        f"Public method {mixin.__name__}.{name} is not decorated with @safe_api!"
+                    )
 
 if __name__ == '__main__':
     unittest.main()
+

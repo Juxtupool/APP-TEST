@@ -118,63 +118,21 @@ The application uses a custom WebView2 bootstrapper located at:
 
 ## Creating an Installer (Recommended)
 
-For professional deployment, create a proper installer using Inno Setup or NSIS.
+For professional deployment, create a proper installer using Inno Setup.
 
-### Option 1: Inno Setup (Recommended)
+### Inno Setup (Recommended)
 
 1. **Download Inno Setup**
    - Get from: https://jrsoftware.org/isdl.php
-   - Install the latest version
+   - Install the latest version.
 
-2. **Create Installer Script** `installer\setup.iss`:
-
-```iss
-#define MyAppName "MacroPad Pro"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "Your Name"
-#define MyAppURL "https://yourwebsite.com"
-#define MyAppExeName "MacroPad Pro.exe"
-
-[Setup]
-AppId={{YOUR-GUID-HERE}}
-AppName={#MyAppName}
-AppVersion={#MyAppVersion}
-AppPublisher={#MyAppPublisher}
-AppPublisherURL={#MyAppURL}
-DefaultDirName={autopf}\{#MyAppName}
-DefaultGroupName={#MyAppName}
-OutputDir=installer\output
-OutputBaseFilename=MacroPad_Pro_Setup_v{#MyAppVersion}
-Compression=lzma2/max
-SolidCompression=yes
-WizardStyle=modern
-PrivilegesRequired=admin
-
-[Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
-
-[Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
-Name: "startup"; Description: "Run at Windows startup"; GroupDescription: "Startup options:"
-
-[Files]
-Source: "dist\MacroPad_Pro\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-[Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-
-[Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
-
-[Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Tasks: startup
-```
+2. **Open the Installer Script**
+   - Open `setup.iss` in the Inno Setup Compiler IDE.
+   - The script is pre-configured with `SetupIconFile=Icon\Logo.ico` to compile the installer using the custom Logo icon.
 
 3. **Compile Installer**
-   - Open `setup.iss` in Inno Setup
-   - Click "Build" → "Compile"
-   - Output: `installer\output\MacroPad_Pro_Setup_v1.0.0.exe`
+   - Click "Build" → "Compile" inside Inno Setup.
+   - Output: `installer_output\Overcontrol_Setup_v1.0.0.exe`
 
 ---
 

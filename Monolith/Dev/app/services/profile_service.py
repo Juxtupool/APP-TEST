@@ -56,8 +56,10 @@ class ProfileService(BaseService):
                 
                 # Write to temporary file first
                 temp_path = file_path_str + ".tmp"
-                with open(temp_path, "w") as f:
+                with open(temp_path, "w", encoding="utf-8") as f:
                     json.dump(profiles, f, indent=4)
+                    f.flush()
+                    os.fsync(f.fileno())
                 
                 # Robust replace with retries
                 max_retries = 5

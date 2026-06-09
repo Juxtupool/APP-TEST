@@ -1524,7 +1524,7 @@ async function deleteMacro(macroName) {
 async function connectSerial(silent = false) {
     const ports = await pywebview.api.get_serial_ports();
     if (ports.length === 0) {
-        if (!silent) await showAlert("Device Not Found", "No compatible devices were detected.<br>Please check your USB connection.", "info");
+        if (!silent) await showAlert("Device Not Found", "No compatible devices were detected.\nPlease check your USB connection.", "info");
         setConnected(false);
         return;
     }
@@ -1534,7 +1534,7 @@ async function connectSerial(silent = false) {
     const monolithPort = ports.find(p => {
         const desc = (p[1] || '').toLowerCase();
         const hwid = (p[2] || '').toLowerCase();
-        return desc.includes('monolith') || hwid.includes('2e8a:0002') || hwid.includes('2e8a:0003');
+        return desc.includes('monolith') || hwid.includes('2e8a:0002') || hwid.includes('2e8a:0003') || hwid.includes('1209:c550');
     });
     
     if (monolithPort) {
@@ -1549,7 +1549,7 @@ async function connectSerial(silent = false) {
     if (isConnectedResult) {
         setConnected(true, portToConnect);
     } else {
-        if (!silent) await showAlert("Connection Failed", "We couldn't negotiate a connection to the OVERCONTROL device.<br>Try unplugging and plugging it back in.", "info");
+        if (!silent) await showAlert("Connection Failed", "We couldn't negotiate a connection to the OVERCONTROL device.\nTry unplugging and plugging it back in.", "info");
         setConnected(false);
     }
 }

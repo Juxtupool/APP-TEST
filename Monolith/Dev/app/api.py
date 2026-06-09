@@ -43,9 +43,60 @@ logging.basicConfig(
     ]
 )
 
+import sys
+import shutil
+
 APP_ROOT = Path(__file__).parent.parent
-PROFILE_PATH = APP_ROOT / "profiles.json"
-CONFIG_PATH = APP_ROOT / "config.json"
+
+# Resolve executable directory if frozen, otherwise project root
+if getattr(sys, 'frozen', False):
+    EXE_DIR = Path(sys.executable).parent
+    
+    # Ensure default profiles.json exists next to exe
+    profile_target = EXE_DIR / "profiles.json"
+    if not profile_target.exists():
+        profile_source = APP_ROOT / "profiles.json"
+        if profile_source.exists():
+            try:
+                shutil.copy2(profile_source, profile_target)
+            except Exception:
+                pass
+    PROFILE_PATH = profile_target
+    
+    # Ensure default config.json exists next to exe
+    config_target = EXE_DIR / "config.json"
+    if not config_target.exists():
+        config_source = APP_ROOT / "config.json"
+        if config_source.exists():
+            try:
+                shutil.copy2(config_source, config_target)
+            except Exception:
+                pass
+    CONFIG_PATH = config_target
+else:
+    EXE_DIR = APP_ROOT
+    PROFILE_PATH = APP_ROOT / "profiles.json"
+    CONFIG_PATH = APP_ROOT / "config.json"
+
+def _load_env_file():
+    """Load environment variables from .env file next to executable or CWD."""
+    env_paths = []
+    if getattr(sys, 'frozen', False):
+        env_paths.append(EXE_DIR / ".env")
+    env_paths.append(Path(".env"))
+    
+    for env_path in env_paths:
+        if env_path.exists():
+            try:
+                with open(env_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            os.environ[key.strip()] = value.strip()
+                break  # Stop checking once we successfully load a .env file
+            except Exception:
+                pass
 
 class Api(
     BaseService,
@@ -102,6 +153,7 @@ class Api(
         # Load firmware version from config, default to Unknown if missing
         self.firmware_version = self._config.get('firmware', {}).get('current_version', 'Unknown')
         self.tray_icon = None
+        self.tray_loop_running = True
         self._tray_update_callback = None
         
         # Callbacks
@@ -138,14 +190,25 @@ class Api(
             self._tray_update_callback()
 
     def _load_config(self) -> Dict:
-        """Load configuration from config.json."""
+        """Load configuration from config.json and merge environment GITHUB_TOKEN."""
+        _load_env_file()
         try:
+            config = {}
             if CONFIG_PATH.exists():
                 with open(CONFIG_PATH, 'r') as f:
-                    return json.load(f)
+                    config = json.load(f)
             else:
                 self.logger.warning(f"Config file not found at {CONFIG_PATH}")
-                return {}
+                
+            # Merge GITHUB_TOKEN environment variable into config dictionary
+            env_token = os.getenv('GITHUB_TOKEN', '').strip()
+            if env_token:
+                if 'github' not in config:
+                    config['github'] = {}
+                config['github']['token'] = env_token
+                self.logger.info("GitHub token loaded from environment/env file")
+                
+            return config
         except Exception as e:
             self.logger.error(f"Error loading config: {e}")
             return {}

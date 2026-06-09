@@ -12,7 +12,7 @@ from pathlib import Path
 # Configuration
 APP_NAME = "Overcontrol"
 MAIN_SCRIPT = "run.py"
-ICON_PATH = "app/assets/icons/app-icon.ico"  # Create this if you have one
+ICON_PATH = "Icon/Logo.ico"
 VERSION = "1.0.0"
 
 # Paths
@@ -28,6 +28,26 @@ try:
     VERSION = APP_VERSION
 except ImportError:
     VERSION = "1.0.2"
+
+def generate_ico():
+    """Generate multi-resolution Logo.ico from Logo.png."""
+    logo_png = PROJECT_ROOT / "Icon" / "Logo.png"
+    logo_ico = PROJECT_ROOT / "Icon" / "Logo.ico"
+    
+    if not logo_png.exists():
+        print(f"  [WARNING] Logo file not found at {logo_png}, skipping ICO generation.")
+        return
+        
+    try:
+        from PIL import Image
+        print(f"Generating multi-resolution icon from {logo_png}...")
+        img = Image.open(logo_png)
+        # Standard Windows icon sizes
+        sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+        img.save(logo_ico, format="ICO", sizes=sizes)
+        print(f"  [OK] Saved multi-resolution icon to {logo_ico}")
+    except Exception as e:
+        print(f"  [ERROR] Failed to convert PNG to ICO: {e}")
 
 def clean_build_dirs():
     """Remove previous build artifacts."""
@@ -73,6 +93,7 @@ def create_pyinstaller_spec():
     data_items = [
         ("app/assets", "app/assets"),           # Include HTML/CSS/JS assets
         ("config.template.json", "."),          # Include config template
+        ("Icon", "Icon"),                       # Include system tray icon
     ]
     
     # Optional files/folders
@@ -172,7 +193,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     version='scripts/version_info.txt',
-    # icon='{ICON_PATH}',  # Uncomment if you have an icon
+    icon='{ICON_PATH}',
 )
 
 coll = COLLECT(
@@ -201,7 +222,7 @@ def build_executable(spec_path):
     
     try:
         result = subprocess.run(
-            ["pyinstaller", "--clean", "--noconfirm", str(spec_path)],
+            [sys.executable, "-m", "PyInstaller", "--clean", "--noconfirm", str(spec_path)],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True
@@ -297,6 +318,9 @@ def main():
     print("="*60)
     print()
     
+    # Step 0: Generate Icon
+    generate_ico()
+    
     # Step 1: Clean
     clean_build_dirs()
     
@@ -311,6 +335,18 @@ def main():
     # Step 4: Create README
     create_readme()
     
+    # Step 4.5: Copy configuration and environment files directly next to executable if they exist in project root
+    dist_path = DIST_DIR / APP_NAME
+    for filename in [".env", "config.json", "profiles.json"]:
+        src_file = PROJECT_ROOT / filename
+        dst_file = dist_path / filename
+        if src_file.exists():
+            try:
+                shutil.copy2(src_file, dst_file)
+                print(f"  [INFO] Copied {filename} to {dist_path}")
+            except Exception as e:
+                print(f"  [WARNING] Could not copy {filename}: {e}")
+    
     # Step 5: Report results
     size_mb = get_dist_size()
     print("\n" + "="*60)
@@ -321,7 +357,6 @@ def main():
     print(f"Estimated installer size: ~{size_mb + 2:.1f} MB")
     print("\nCompare to bundled WebView2 approach: ~400 MB")
     print(f"Size reduction: ~{400 - size_mb:.0f} MB ({((400-size_mb)/400*100):.0f}%)")
-    print("="*60)
     print("\n[OK] Build complete! Ready for installer creation.")
 
 if __name__ == "__main__":

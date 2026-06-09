@@ -2,23 +2,37 @@ import logging
 import winreg
 import sys
 from pathlib import Path
+from app.core import safe_api, ApiResponse
 
 logger = logging.getLogger(__name__)
 
 class SystemMixin:
+    @safe_api
     def window_minimize(self):
         """Minimize the window."""
+        if hasattr(self, '_macro_recording_service'):
+            try:
+                self._macro_recording_service.stop_recording(is_emergency=True)
+            except Exception as e:
+                logger.error(f"Error stopping macro recording on minimize: {e}")
         if self._window:
             self._window.minimize()
             
+    @safe_api
     def window_close(self):
         """Close the window (or hide if tray is enabled)."""
+        if hasattr(self, '_macro_recording_service'):
+            try:
+                self._macro_recording_service.stop_recording(is_emergency=True)
+            except Exception as e:
+                logger.error(f"Error stopping macro recording on close: {e}")
         if self._window:
             if self.tray_enabled:
                  self._window.hide()
             else:
                  self._window.destroy()
 
+    @safe_api
     def get_startup_status(self):
         try:
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ)
@@ -28,6 +42,7 @@ class SystemMixin:
         except WindowsError:
             return {"status": "success", "enabled": False}
 
+    @safe_api
     def set_startup_status(self, enabled):
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         try:
@@ -51,10 +66,12 @@ class SystemMixin:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    @safe_api
     def get_auto_switch_status(self):
         enabled = self._config.get("auto_switching", {}).get("enabled", True)
         return {"status": "success", "enabled": enabled}
 
+    @safe_api
     def set_auto_switch_enabled(self, enabled):
         if "auto_switching" not in self._config:
             self._config["auto_switching"] = {}
@@ -63,18 +80,22 @@ class SystemMixin:
         self._profile_switcher.update_config(self._config)
         return {"status": "success"}
 
+    @safe_api
     def get_tray_status(self):
         return {"status": "success", "enabled": self.tray_enabled}
 
+    @safe_api
     def set_tray_status(self, enabled):
         self.tray_enabled = enabled
         self._profiles["minimize_to_tray"] = enabled
         self._profile_service.save_profiles(self._profiles)
         return {"status": "success"}
 
+    @safe_api
     def get_theme(self):
         return {"status": "success", "theme": self.current_theme}
     
+    @safe_api
     def set_theme(self, theme):
         # Deprecated but kept for compatibility, defaulting to dark
         self.current_theme = "dark" 
@@ -82,19 +103,23 @@ class SystemMixin:
         self._profile_service.save_profiles(self._profiles)
         return {"status": "success"}
 
+    @safe_api
     def get_accent_color(self):
         return {"status": "success", "accent_color": self.current_accent_color}
 
+    @safe_api
     def set_accent_color(self, color):
         self.current_accent_color = color
         self._profiles["accent_color"] = color
         self._profile_service.save_profiles(self._profiles)
         return {"status": "success"}
 
+    @safe_api
     def get_saved_colors(self):
         saved = self._profiles.get("saved_colors", [])
         return {"status": "success", "colors": saved}
 
+    @safe_api
     def add_saved_color(self, color):
         saved = self._profiles.get("saved_colors", [])
         if color not in saved:
@@ -103,6 +128,7 @@ class SystemMixin:
             self._profile_service.save_profiles(self._profiles)
         return {"status": "success", "colors": saved}
 
+    @safe_api
     def remove_saved_color(self, color):
         saved = self._profiles.get("saved_colors", [])
         if color in saved:

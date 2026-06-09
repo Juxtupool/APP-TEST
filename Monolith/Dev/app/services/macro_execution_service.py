@@ -62,6 +62,10 @@ class MacroExecutionService:
                         logger.error("No command specified")
                         return
                     
+                    if not self._is_command_safe(command):
+                        logger.error(f"Execution of dangerous command blocked: {command[:100]}")
+                        return
+                    
                     # Sanitize: execution through list arguments is preferred over shell=True
                     
                     if command.lower().startswith("powershell"):
@@ -217,5 +221,19 @@ class MacroExecutionService:
             'launchapp2': KeyCode.from_vk(183)
         }
         return key_map.get(key_str.lower(), key_str)
+
+    def _is_command_safe(self, command: str) -> bool:
+        """Scan command string for highly dangerous keywords to prevent remote code execution."""
+        dangerous_keywords = [
+            "downloadstring", "downloadfile", "invoke-expression", "iex",
+            "invoke-webrequest", "iwr", "rmdir /s", "del /f", "format ",
+            "reg add", "net user", "net localgroup", "bitsadmin"
+        ]
+        cmd_lower = command.lower()
+        for kw in dangerous_keywords:
+            if kw in cmd_lower:
+                logger.error(f"SECURITY BLOCK: Blocked command due to dangerous keyword '{kw}'")
+                return False
+        return True
         
 

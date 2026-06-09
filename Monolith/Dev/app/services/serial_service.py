@@ -100,11 +100,12 @@ class SerialService:
                 if 'BTHENUM' in hwid or 'bluetooth' in desc:
                     continue
                 
-                # Prioritize 'Monolith' devices or anything with RP2040 hardware IDs
+                # Prioritize 'Monolith' devices, RP2040, or CH552 ch55xduino IDs
                 is_monolith = 'monolith' in desc.lower() or 'monolith' in hwid.lower()
                 is_rp2040 = '2E8A:0002' in hwid or '2E8A:0003' in hwid
+                is_ch552 = '1209:C550' in hwid
                 
-                if is_monolith or is_rp2040:
+                if is_monolith or is_rp2040 or is_ch552:
                     filtered_ports.insert(0, (port.device, port.description, port.hwid))
                 else:
                     filtered_ports.append((port.device, port.description, port.hwid))

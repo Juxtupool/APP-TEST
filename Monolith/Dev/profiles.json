@@ -7,58 +7,6 @@
             "knob_mode": "Standard",
             "linked_apps": []
         },
-        "Git": {
-            "macros": {
-                "Git Status": {
-                    "name": "Git Status",
-                    "icon": "icons/Development/git-repository-commits-line.svg",
-                    "type": "command",
-                    "command": "cmd /k git status"
-                },
-                "Git Pull": {
-                    "name": "Git Pull",
-                    "icon": "icons/Development/git-pull-request-line.svg",
-                    "type": "command",
-                    "command": "cmd /k git pull"
-                },
-                "Git Push": {
-                    "name": "Git Push",
-                    "icon": "icons/Development/git-merge-line.svg",
-                    "type": "command",
-                    "command": "cmd /k git push"
-                },
-                "Git Add All": {
-                    "name": "Git Add All",
-                    "icon": "icons/Development/git-commit-line.svg",
-                    "type": "command",
-                    "command": "cmd /k git add -A && git status"
-                },
-                "Git Log": {
-                    "name": "Git Log",
-                    "icon": "icons/Development/git-branch-line.svg",
-                    "type": "command",
-                    "command": "cmd /k git log --oneline -n 10"
-                },
-                "Git Bash": {
-                    "name": "Git Bash",
-                    "icon": "icons/Logos/github-fill.svg",
-                    "type": "launch",
-                    "path": "C:\\Program Files\\Git\\git-bash.exe"
-                }
-            },
-            "keys": {
-                "1": "Git Status",
-                "2": "Git Pull",
-                "3": "Git Push",
-                "4": "Git Add All",
-                "5": "Git Log",
-                "6": "Git Bash"
-            },
-            "knobs": {},
-            "knob_mode": "Standard",
-            "origin": "community-profile",
-            "linked_apps": []
-        },
         "Desktop": {
             "macros": {
                 "Spotify (No Ads)": {
@@ -202,6 +150,13 @@
                             "value": "MediaPlayPause"
                         }
                     ]
+                },
+                "CMD": {
+                    "name": "CMD",
+                    "icon": "icons/Development/terminal-box-line.svg",
+                    "type": "launch",
+                    "path": "C:\\Windows\\System32\\cmd.exe",
+                    "origin": "community"
                 }
             },
             "keys": {
@@ -215,123 +170,8 @@
             "knobs": {},
             "knob_mode": "Standard",
             "origin": "community-profile",
-            "linked_apps": []
-        },
-        "DaVinci Resolve": {
-            "macros": {
-                "Play/Pause": {
-                    "name": "Play/Pause",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "Space"
-                        }
-                    ]
-                },
-                "Blade Tool": {
-                    "name": "Blade Tool",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "b"
-                        }
-                    ]
-                },
-                "Split Clip": {
-                    "name": "Split Clip",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key_down",
-                            "value": "Ctrl"
-                        },
-                        {
-                            "type": "key",
-                            "value": "\\"
-                        }
-                    ]
-                },
-                "Add Marker": {
-                    "name": "Add Marker",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "m"
-                        }
-                    ]
-                },
-                "Next Edit": {
-                    "name": "Next Edit",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "Down"
-                        }
-                    ]
-                },
-                "Previous Edit": {
-                    "name": "Previous Edit",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "Up"
-                        }
-                    ]
-                },
-                "Ripple Delete": {
-                    "name": "Ripple Delete",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "delete"
-                        }
-                    ]
-                },
-                "Frame Forward": {
-                    "name": "Frame Forward",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "Right"
-                        }
-                    ]
-                },
-                "Frame Backward": {
-                    "name": "Frame Backward",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key",
-                            "value": "Left"
-                        }
-                    ]
-                }
-            },
-            "keys": {
-                "0": "Blade Tool",
-                "1": "Next Edit",
-                "2": "Previous Edit",
-                "3": "Blade Tool",
-                "4": "Play/Pause",
-                "5": "Split Clip",
-                "6": "Ripple Delete"
-            },
-            "knobs": {
-                "knob_rotate_left": "Frame Backward",
-                "knob_rotate_right": "Frame Forward"
-            },
-            "knob_mode": "Timeline Scrubber",
-            "origin": "community-profile",
-            "linked_apps": [
-                "resolve.exe"
-            ]
+            "linked_apps": [],
+            "knob_speed": 1
         }
     },
     "active_profile": "Desktop",
@@ -339,7 +179,7 @@
         "#5fce61",
         "#64c3c3"
     ],
-    "accent_color": "#ff5c7a",
+    "accent_color": "#bee628",
     "minimize_to_tray": true,
     "theme": "carbon-black"
 }

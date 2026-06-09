@@ -65,15 +65,53 @@ class WebView2Bootstrapper:
     def download_bootstrapper(self):
         """Download the WebView2 Runtime bootstrapper."""
         print(f"Downloading WebView2 Runtime installer...")
+        
+        import time
+        start_time = time.time()
+        last_update = [0.0]  # Store state in a mutable structure
+        
+        def reporthook(block_num, block_size, total_size):
+            current_time = time.time()
+            # Throttle console updates to max once per 0.2 seconds to avoid console lag
+            if current_time - last_update[0] < 0.2 and block_num * block_size < total_size:
+                return
+            last_update[0] = current_time
+            
+            downloaded = block_num * block_size
+            elapsed_time = current_time - start_time
+            if elapsed_time <= 0:
+                elapsed_time = 0.01
+                
+            speed = downloaded / elapsed_time  # Bytes per second
+            
+            # Format speed
+            if speed > 1024 * 1024:
+                speed_str = f"{speed / (1024 * 1024):.2f} MB/s"
+            elif speed > 1024:
+                speed_str = f"{speed / 1024:.1f} KB/s"
+            else:
+                speed_str = f"{speed:.0f} B/s"
+                
+            downloaded_mb = downloaded / (1024 * 1024)
+            
+            if total_size > 0:
+                total_mb = total_size / (1024 * 1024)
+                percent = (downloaded / total_size) * 100
+                sys.stdout.write(f"\rDownloaded {downloaded_mb:.2f} MB of {total_mb:.2f} MB ({percent:.1f}%) at {speed_str}...")
+            else:
+                sys.stdout.write(f"\rDownloaded {downloaded_mb:.2f} MB at {speed_str}...")
+            sys.stdout.flush()
+
         try:
             urllib.request.urlretrieve(
                 self.WEBVIEW2_BOOTSTRAPPER_URL,
-                self.bootstrapper_path
+                self.bootstrapper_path,
+                reporthook=reporthook
             )
-            print(f"[OK] Downloaded: {self.bootstrapper_path}")
+            print("\n[OK] Download complete!")
             return True
         except Exception as e:
-            print(f"[ERROR] Failed to download WebView2 installer: {e}")
+            print(f"\n[ERROR] Failed to download WebView2 installer: {e}")
             return False
     
     def install_webview2(self, silent=True):

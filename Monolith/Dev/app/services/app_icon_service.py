@@ -265,9 +265,10 @@ class AppIconService(BaseService):
                 return None
             
             # Common Logic: Convert HICON to Base64 PNG
+            hdc_handle = win32gui.GetDC(0)
             try:
                 # Create a device context
-                hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+                hdc = win32ui.CreateDCFromHandle(hdc_handle)
                 hbmp = win32ui.CreateBitmap()
                 hbmp.CreateCompatibleBitmap(hdc, size, size)
                 hdc_mem = hdc.CreateCompatibleDC()
@@ -320,11 +321,11 @@ class AppIconService(BaseService):
                 # Cleanup DC objects
                 hdc_mem.DeleteDC()
                 hdc.DeleteDC()
-                win32gui.ReleaseDC(0, hdc.GetSafeHdc())
                 
                 return f"data:image/png;base64,{img_base64}"
                 
             finally:
+                win32gui.ReleaseDC(0, hdc_handle)
                 # Always destroy the icon handle we created/got
                 if hicon:
                     win32gui.DestroyIcon(hicon)

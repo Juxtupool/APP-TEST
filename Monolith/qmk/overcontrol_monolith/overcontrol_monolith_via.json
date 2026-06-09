@@ -1,0 +1,23 @@
+{
+  "name": "OverControl Monolith",
+  "vendorId": "0xFEED",
+  "productId": "0x0001",
+  "lighting": "none",
+  "matrix": {
+    "rows": 1,
+    "cols": 7
+  },
+  "layouts": {
+    "keymap": [
+      [
+        {"label": "SW1", "y": 0, "x": 0}, "0,0",
+        {"label": "SW2", "x": 1}, "0,1",
+        {"label": "SW3", "x": 2}, "0,2",
+        {"label": "SW4", "x": 3}, "0,3",
+        {"label": "SW5", "x": 4}, "0,4",
+        {"label": "SW6", "x": 5}, "0,5",
+        {"label": "KNOB_SW\n\n\n\n\n\n\n\n\ne0", "x": 7}, "0,6"
+      ]
+    ]
+  }
+}
