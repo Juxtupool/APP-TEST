@@ -71,6 +71,10 @@ class ProfileMixin:
         self._knob_controller.set_mode(knob_mode)
         self._knob_controller.set_speed(knob_speed)
         
+        # Send active knob mode to hardware
+        if hasattr(self, '_serial_service') and self._serial_service.is_connected:
+            self._serial_service.send_raw_command(f"SET_KNOB_MODE {knob_mode}")
+        
         return ApiResponse.success()
 
     @safe_api
@@ -81,6 +85,11 @@ class ProfileMixin:
             self._profile_service.save_profiles(self._profiles)
             
         self._knob_controller.set_mode(mode)
+        
+        # Send changed knob mode to hardware
+        if hasattr(self, '_serial_service') and self._serial_service.is_connected:
+            self._serial_service.send_raw_command(f"SET_KNOB_MODE {mode}")
+            
         return ApiResponse.success()
 
     @safe_api
@@ -109,6 +118,10 @@ class ProfileMixin:
         # Reset knob mode too
         self._knob_controller.set_mode("Standard")
         self._knob_controller.set_speed(1)
+        
+        # Send reset knob mode to hardware
+        if hasattr(self, '_serial_service') and self._serial_service.is_connected:
+            self._serial_service.send_raw_command("SET_KNOB_MODE Standard")
         
         # Reload UI using bridge
         if self._window:

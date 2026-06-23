@@ -12,7 +12,7 @@
     "firmware": {
         "flash_baudrate": 460800,
         "default_firmware_path": "firmware/build",
-        "current_version": "2.1.0"
+        "current_version": "2.2.0"
     },
     "knob": {
         "app_switcher_release_delay": 0.35,
@@ -31,7 +31,7 @@
         "firmware_repo": "Juxtupool/APP-TEST",
         "app_repo": "Juxtupool/APP-TEST",
         "community_repo": "Juxtupool/APP-TEST",
-        "token": "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"
+        "token": ""
     },
     "community": {
         "submission_url": "https://solitary-cake-d872.pulakataranga.workers.dev/"

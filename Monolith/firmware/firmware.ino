@@ -1,11 +1,22 @@
-#include <Keyboard.h>
-#include <USB.h>
+#include <Adafruit_TinyUSB.h>
+
+// Define the HID report descriptor for a Keyboard to enable keyboard HID icon in Device Manager
+uint8_t const desc_hid_report[] = {
+  TUD_HID_REPORT_DESC_KEYBOARD()
+};
+
+// Initialize USB HID for Keyboard
+Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report), HID_ITF_PROTOCOL_KEYBOARD, 2, false);
+
+Adafruit_USBD_MIDI usb_midi;
+String knobMode = "Standard";
 
 // ===========================================
 // FIRMWARE VERSION
 // ============================================
-const char FIRMWARE_VERSION[] = "2.1.0"; // Renamed to Overcontrol. Enabled Keyboard HID for icon.
+const char FIRMWARE_VERSION[] = "2.1.0";
 // Version History:
+// 2.2.0 - Changed knob behaviour from Native USB MIDI to Hardware Interrupt
 // 2.1.0 - Renamed to Overcontrol. Enabled Keyboard HID for icon.
 // 2.0.0 - Migrated to RP2040-Zero. GPIO 0-5 for switches, GPIO 6-8 for rotary encoder.
 // 1.1.2 - Optimized: Eliminated heap allocations, consolidated debounce logic
@@ -74,11 +85,13 @@ void sendVersion() {
 // ============================================
 
 void setup() {
-  USB.setManufacturer("Overcontrol");
-  USB.setProduct("OverControl Monolith");
+  TinyUSBDevice.setManufacturerDescriptor("Overcontrol");
+  TinyUSBDevice.setProductDescriptor("Monolith");
+  
+  usb_hid.begin();
+  usb_midi.begin();
   
   Serial.begin(115200);
-  Keyboard.begin();
 
   for (int i = 0; i < numKeys; i++) {
     pinMode(keys[i].pin, INPUT_PULLUP);
@@ -111,7 +124,9 @@ void loop() {
 
     if (incoming == "GET_VERSION") {
       sendVersion();
-    } 
+    } else if (incoming.startsWith("SET_KNOB_MODE ")) {
+      knobMode = incoming.substring(14);
+    }
   }
 
   // --- Scan Keys ---
@@ -131,9 +146,19 @@ void loop() {
   if (currentCLKState != lastCLKState && currentCLKState == 1) {
     anyActivity = true;
     if (digitalRead(DT_PIN) != currentCLKState) {
-      Serial.println("KNOB_RIGHT");
+      if (knobMode == "MIDI Controller") {
+        uint8_t msg[] = {0xB0, 20, 65};
+        usb_midi.write(msg, 3);
+      } else {
+        Serial.println("KNOB_RIGHT");
+      }
     } else {
-      Serial.println("KNOB_LEFT");
+      if (knobMode == "MIDI Controller") {
+        uint8_t msg[] = {0xB0, 20, 63};
+        usb_midi.write(msg, 3);
+      } else {
+        Serial.println("KNOB_LEFT");
+      }
     }
   }
   lastCLKState = currentCLKState;
@@ -143,10 +168,17 @@ void loop() {
   if (knobReading != lastKnobReading) anyActivity = true;
   if (checkButtonDebounce(knobReading, lastKnobReading, knobState,
                           lastKnobDebounceTime, LOW, currentTime)) {
-    Serial.println("KNOB_PRESS");
+    if (knobMode == "MIDI Controller") {
+      uint8_t noteOn[] = {0x90, 60, 127};
+      usb_midi.write(noteOn, 3);
+      delay(50);
+      uint8_t noteOff[] = {0x80, 60, 0};
+      usb_midi.write(noteOff, 3);
+    } else {
+      Serial.println("KNOB_PRESS");
+    }
     anyActivity = true;
   }
 
   delay(anyActivity ? 1 : 10);
 }
-

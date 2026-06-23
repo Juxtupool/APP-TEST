@@ -244,6 +244,15 @@ async function startFirmwareUpdate(downloadUrl) {
         // Hide overlay so next update can start fresh or clean up
         UpdateOverlay.destroy();
 
+        // Close the update status modal if it exists
+        const updateStatusModal = document.getElementById('update-status-modal');
+        if (updateStatusModal) {
+            updateStatusModal.classList.remove('active');
+            setTimeout(() => {
+                updateStatusModal.style.display = 'none';
+            }, 300);
+        }
+
     } catch (e) {
         console.error("Firmware Update Error", e);
         UpdateOverlay.setStatus("Firmware Update Failed: " + e.message);

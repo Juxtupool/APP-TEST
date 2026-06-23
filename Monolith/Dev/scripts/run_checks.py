@@ -198,7 +198,7 @@ def main():
         print("\n[!] Errors found! Fix compilation errors and install dependencies.")
         sys.exit(1)
     else:
-        print("\n[✓] Basic checks passed successfully.")
+        print("\n[OK] Basic checks passed successfully.")
         sys.exit(0)
 
 if __name__ == "__main__":

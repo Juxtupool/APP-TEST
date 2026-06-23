@@ -166,22 +166,7 @@ function displayCommunityMacros() {
         });
     });
 
-    // Star button listener (visual only for now)
-    grid.querySelectorAll('.macro-card-btn-icon').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const icon = btn.querySelector('i');
-            if (icon.classList.contains('fa-regular')) {
-                icon.classList.remove('fa-regular');
-                icon.classList.add('fa-solid');
-                icon.style.color = '#F59E0B';
-            } else {
-                icon.classList.add('fa-regular');
-                icon.classList.remove('fa-solid');
-                icon.style.color = '';
-            }
-        });
-    });
+
 }
 
 // Search community macros (Client-Side)
@@ -265,24 +250,7 @@ function createMacroCard(macro) {
                     ${tags.map(tag => `<span class="macro-tag">#${escapeHtml(tag)}</span>`).join('')}
                 </div>
             ` : ''}
-            <div class="macro-card-stats">
-                <div class="macro-stat" title="Downloads">
-                    <i class="fa-solid fa-download"></i>
-                    <span>${macro.downloads || 0}</span>
-                </div>
-                <div class="macro-stat" title="Stars">
-                    <i class="fa-solid fa-star"></i>
-                    <span>${likes}</span>
-                </div>
-                <div class="macro-stat" title="Uploaded">
-                    <i class="fa-solid fa-calendar"></i>
-                    <span>${dateStr}</span>
-                </div>
-            </div>
             <div class="macro-card-footer">
-                <button class="macro-card-btn-icon" title="Star this macro">
-                    <i class="fa-regular fa-star"></i>
-                </button>
                 <button class="macro-card-btn ${isProfile ? 'btn-profile' : ''}" data-macro="${macroJson}">
                     <i class="fa-solid ${buttonIcon}"></i>
                     ${buttonText}

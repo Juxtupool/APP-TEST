@@ -359,47 +359,36 @@
    =========================== */
 .macro-card {
     position: relative;
-    background: linear-gradient(135deg, rgba(28, 28, 30, 0.75) 0%, rgba(18, 18, 20, 0.9) 100%);
+    background: var(--card-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-radius: 16px;
-    padding: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-medium);
     cursor: default;
     display: flex;
     flex-direction: column;
     overflow: visible;
 }
 
-.macro-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
-    opacity: 1;
-    pointer-events: none;
-    border-radius: 16px;
-    transition: opacity 0.3s;
-}
-
 .macro-card:hover {
-    transform: translateY(-6px) scale(1.01);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45), 0 0 16px rgba(255, 255, 255, 0.08);
+    transform: translateY(-4px);
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-lg), 0 0 16px var(--accent-glow);
 }
 
 /* Community Badge */
 .community-badge {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 18px;
+    right: 18px;
     padding: 4px 8px;
     background: rgba(96, 165, 250, 0.08);
     color: #60a5fa;
     border: 1px solid rgba(96, 165, 250, 0.15);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.5px;
@@ -418,31 +407,30 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     padding-right: 70px; /* Space for community badge */
 }
 
 .macro-card-icon {
     width: 40px;
     height: 40px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.85);
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
     font-size: 1.2rem;
     flex-shrink: 0;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transition: all var(--transition-medium);
+    box-shadow: var(--shadow-sm);
 }
 
 .macro-card:hover .macro-card-icon {
     transform: scale(1.05) rotate(-3deg);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+    border-color: var(--border-hover);
+    color: var(--accent-color);
 }
 
 .macro-card-info {
@@ -453,7 +441,7 @@
 .macro-card-title {
     font-size: 15px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--text-primary);
     margin: 0 0 3px 0;
     line-height: 1.3;
     overflow: hidden;
@@ -466,7 +454,7 @@
 
 .macro-card-author {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 5px;
@@ -480,14 +468,14 @@
 /* Description */
 .macro-card-description {
     font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     line-height: 1.5;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     margin-top: 4px;
     flex-grow: 1;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -497,44 +485,23 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .macro-tag {
-    padding: 3px 8px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.6);
-    transition: all 0.2s;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
 }
 
 .macro-tag:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: #fff;
-}
-
-/* Stats */
-.macro-card-stats {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 11.5px;
-    color: rgba(255, 255, 255, 0.4);
-    margin-bottom: 14px;
-}
-
-.macro-stat {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.macro-stat i {
-    color: rgba(255, 255, 255, 0.3);
-    font-size: 11px;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
 }
 
 /* Footer & Actions Layout */
@@ -542,46 +509,23 @@
     display: flex;
     gap: 8px;
     margin-top: auto;
-    padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* Star Button */
-.macro-card-btn-icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
-    color: rgba(255, 255, 255, 0.65);
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
-    box-sizing: border-box;
-}
-
-.macro-card-btn-icon:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #F59E0B;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
 }
 
 /* CTA Button */
 .macro-card-btn {
     flex: 1;
-    height: 36px;
+    height: 38px;
     padding: 0 16px;
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(96, 165, 250, 0.2);
-    border-radius: 8px;
+    background: hsla(0, 0%, 100%, 0.02);
+    color: var(--text-primary);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 600;
     font-size: 13px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-fast);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -591,11 +535,11 @@
 }
 
 .macro-card-btn:hover {
-    background: #60a5fa;
-    color: #0f172a;
-    border-color: #60a5fa;
+    background: var(--accent-color);
+    color: #000000;
+    border-color: var(--accent-color);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+    box-shadow: 0 4px 12px var(--accent-glow);
 }
 
 .macro-card-btn.btn-profile {
@@ -603,14 +547,14 @@
 }
 
 .macro-card-btn.btn-profile:hover {
-    background: #f59e0b;
-    color: #0f172a;
-    border-color: #f59e0b;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    background: var(--warning-color);
+    color: #000000;
+    border-color: var(--warning-color);
+    box-shadow: 0 4px 12px hsla(47.9, 95.8%, 51.2%, 0.25);
 }
 
 .macro-card-btn:active {
-    transform: translateY(1px);
+    transform: scale(0.98);
 }
 
 .macro-card-btn i {

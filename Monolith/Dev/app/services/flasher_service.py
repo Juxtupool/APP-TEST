@@ -86,6 +86,14 @@ class FlasherService:
             try:
                 shutil.copy(firmware_path, drive)
                 logger.info(f"Successfully copied {firmware_path} to {drive}")
+                
+                # Attempt to close the Explorer window that Windows automatically pops up
+                def close_windows_delayed():
+                    for _ in range(6):
+                        time.sleep(0.3)
+                        self._close_rpi_explorer_window()
+                threading.Thread(target=close_windows_delayed, daemon=True).start()
+                
             except Exception as e:
                 err_msg = f"Failed to copy firmware file: {e}"
                 logger.error(err_msg)
@@ -108,3 +116,19 @@ class FlasherService:
             
         finally:
             self.is_flashing = False
+
+    def _close_rpi_explorer_window(self):
+        import win32gui
+        import win32con
+        
+        def callback(hwnd, extra):
+            if win32gui.GetClassName(hwnd) == "CabinetWClass":
+                title = win32gui.GetWindowText(hwnd)
+                if "RPI-RP2" in title:
+                    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                    logger.info(f"Closed RPI-RP2 explorer window: '{title}'")
+        
+        try:
+            win32gui.EnumWindows(callback, None)
+        except Exception as e:
+            logger.debug(f"Failed to enumerate windows: {e}")

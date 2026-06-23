@@ -632,6 +632,13 @@ function updateUIForProfile() {
             document.querySelector('.knob-action-card[data-action="knob_rotate_right"] .assigned-macro').innerText = "Next App";
             document.querySelector('.knob-action-card[data-action="knob_press"] .assigned-macro').innerText = "Select";
 
+        } else if (knobMode === "MIDI Controller") {
+            modeDesc.innerText = "MIDI Controller: Sends native USB-MIDI CC and Note messages.";
+
+            document.querySelector('.knob-action-card[data-action="knob_rotate_left"] .assigned-macro').innerText = "MIDI CC 20 (Value 63)";
+            document.querySelector('.knob-action-card[data-action="knob_rotate_right"] .assigned-macro').innerText = "MIDI CC 20 (Value 65)";
+            document.querySelector('.knob-action-card[data-action="knob_press"] .assigned-macro').innerText = "MIDI Note C4 (Trigger)";
+
         } else {
             modeDesc.innerText = "Window Switcher: Instant window switching.";
 

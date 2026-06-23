@@ -241,7 +241,7 @@
                     "name": "Spotify (No Ads)",
                     "icon": "icons/Logos/spotify-fill.svg",
                     "type": "command",
-                    "command": "spicetify auto"
+                    "command": "powershell & '$env:LOCALAPPDATA\\spicetify\\spicetify.exe' apply; Start-Process '$env:APPDATA\\Spotify\\Spotify.exe'"
                 },
                 "WLED": {
                     "name": "WLED",

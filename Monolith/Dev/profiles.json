@@ -71,7 +71,7 @@
                     "name": "Antigravity",
                     "icon": "icons/Development/code-box-line.svg",
                     "type": "launch",
-                    "path": "C:\\Users\\pulak\\AppData\\Local\\Programs\\Antigravity\\Antigravity.exe"
+                    "path": "C:\\Users\\pulak\\AppData\\Local\\Programs\\Antigravity IDE\\Antigravity IDE.exe"
                 },
                 "Test Macro": {
                     "name": "Test Macro",
@@ -157,18 +157,115 @@
                     "type": "launch",
                     "path": "C:\\Windows\\System32\\cmd.exe",
                     "origin": "community"
+                },
+                "test": {
+                    "name": "test",
+                    "type": "advanced",
+                    "actions": [
+                        {
+                            "type": "key_down",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "P"
+                        },
+                        {
+                            "type": "key_up",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "U"
+                        },
+                        {
+                            "type": "key",
+                            "value": "L"
+                        },
+                        {
+                            "type": "key",
+                            "value": "A"
+                        },
+                        {
+                            "type": "key",
+                            "value": "K"
+                        },
+                        {
+                            "type": "key",
+                            "value": "Space"
+                        },
+                        {
+                            "type": "key_down",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "N"
+                        },
+                        {
+                            "type": "key_up",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "Shift"
+                        },
+                        {
+                            "type": "key",
+                            "value": "A"
+                        },
+                        {
+                            "type": "key",
+                            "value": "Y"
+                        },
+                        {
+                            "type": "key",
+                            "value": "A"
+                        },
+                        {
+                            "type": "key",
+                            "value": "K"
+                        },
+                        {
+                            "type": "key",
+                            "value": "Enter"
+                        }
+                    ]
+                },
+                "Left": {
+                    "name": "Left",
+                    "type": "advanced",
+                    "actions": [
+                        {
+                            "type": "key",
+                            "value": "ArrowLeft"
+                        }
+                    ]
+                },
+                "Right": {
+                    "name": "Right",
+                    "type": "advanced",
+                    "actions": [
+                        {
+                            "type": "key",
+                            "value": "ArrowRight"
+                        }
+                    ]
                 }
             },
             "keys": {
                 "1": "Antigravity",
                 "2": "Previous Track",
-                "3": "Autobot",
+                "3": "test",
                 "4": "Play/Pause",
                 "5": "Spotify (No Ads)",
                 "6": "Next Track"
             },
-            "knobs": {},
-            "knob_mode": "Standard",
+            "knobs": {
+                "knob_rotate_left": "Left",
+                "knob_rotate_right": "Right"
+            },
+            "knob_mode": "Custom",
             "origin": "community-profile",
             "linked_apps": [],
             "knob_speed": 1
@@ -177,9 +274,9 @@
     "active_profile": "Desktop",
     "saved_colors": [
         "#5fce61",
-        "#64c3c3"
+        "#eda01d"
     ],
-    "accent_color": "#bee628",
+    "accent_color": "#eda01d",
     "minimize_to_tray": true,
     "theme": "carbon-black"
 }

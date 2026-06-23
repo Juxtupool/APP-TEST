@@ -53,6 +53,26 @@ def clean_build_dirs():
     """Remove previous build artifacts."""
     print("Cleaning previous build directories...")
     
+    # Workaround for WinError 5 (Access is denied) on locked files (e.g. VCRUNTIME140.dll, VCRUNTIME140_1.dll)
+    for base_dir in [DIST_DIR / APP_NAME, DIST_DIR / APP_NAME / "_internal"]:
+        if base_dir.exists():
+            try:
+                BUILD_DIR.mkdir(parents=True, exist_ok=True)
+                temp_dir = BUILD_DIR / "temp_locked"
+                temp_dir.mkdir(parents=True, exist_ok=True)
+                
+                for f in list(base_dir.glob("*")):
+                    if f.is_file() and (f.suffix.lower() in ('.dll', '.bak') or 'vcruntime' in f.name.lower() or 'msvcp' in f.name.lower()):
+                        try:
+                            import time
+                            dest_file = temp_dir / f"{f.stem}_{int(time.time())}{f.suffix}"
+                            f.rename(dest_file)
+                            print(f"  [INFO] Moved locked file {f.name} to {dest_file}")
+                        except Exception as e:
+                            print(f"  [WARNING] Could not move locked file {f.name}: {e}")
+            except Exception as e:
+                print(f"  [WARNING] Error during locked files pre-clean: {e}")
+    
     def on_rm_error(func, path, exc_info):
         """
         Error handler for ``shutil.rmtree``.

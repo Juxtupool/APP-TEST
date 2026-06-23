@@ -19,6 +19,7 @@ from .services.community_library_service import CommunityLibraryService
 from .services.update_manager import UpdateManager
 from .services.app_icon_service import AppIconService
 from .utils.thread_safe_ui import get_ui_bridge
+from .utils.config_manager import load_config, save_config
 
 # Import Handlers (Mixins)
 from .handlers.profile_handler import ProfileMixin
@@ -78,25 +79,7 @@ else:
     PROFILE_PATH = APP_ROOT / "profiles.json"
     CONFIG_PATH = APP_ROOT / "config.json"
 
-def _load_env_file():
-    """Load environment variables from .env file next to executable or CWD."""
-    env_paths = []
-    if getattr(sys, 'frozen', False):
-        env_paths.append(EXE_DIR / ".env")
-    env_paths.append(Path(".env"))
-    
-    for env_path in env_paths:
-        if env_path.exists():
-            try:
-                with open(env_path, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith('#') and '=' in line:
-                            key, value = line.split('=', 1)
-                            os.environ[key.strip()] = value.strip()
-                break  # Stop checking once we successfully load a .env file
-            except Exception:
-                pass
+# env loading moved to config_manager
 
 class Api(
     BaseService,
@@ -190,37 +173,12 @@ class Api(
             self._tray_update_callback()
 
     def _load_config(self) -> Dict:
-        """Load configuration from config.json and merge environment GITHUB_TOKEN."""
-        _load_env_file()
-        try:
-            config = {}
-            if CONFIG_PATH.exists():
-                with open(CONFIG_PATH, 'r') as f:
-                    config = json.load(f)
-            else:
-                self.logger.warning(f"Config file not found at {CONFIG_PATH}")
-                
-            # Merge GITHUB_TOKEN environment variable into config dictionary
-            env_token = os.getenv('GITHUB_TOKEN', '').strip()
-            if env_token:
-                if 'github' not in config:
-                    config['github'] = {}
-                config['github']['token'] = env_token
-                self.logger.info("GitHub token loaded from environment/env file")
-                
-            return config
-        except Exception as e:
-            self.logger.error(f"Error loading config: {e}")
-            return {}
+        """Load configuration using configuration manager service."""
+        return load_config(CONFIG_PATH, EXE_DIR)
     
     def _save_config(self):
-        """Save configuration to config.json."""
-        try:
-            with open(CONFIG_PATH, 'w') as f:
-                json.dump(self._config, f, indent=4)
-            self.logger.info("Configuration saved")
-        except Exception as e:
-            self.logger.error(f"Error saving config: {e}")
+        """Save configuration using configuration manager service."""
+        save_config(CONFIG_PATH, self._config)
 
     def _send_toast_notification(self, title, message):
         """Send a Windows Toast Notification using PowerShell."""
