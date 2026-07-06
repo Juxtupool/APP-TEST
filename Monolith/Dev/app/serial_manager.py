@@ -1,9 +1,15 @@
+import os
+import sys
+import time
+import json
+import shutil
+import logging
+import threading
 import serial
 import serial.tools.list_ports
-import json
-import threading
-import time
-import logging
+import win32api
+import win32gui
+import win32con
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +29,6 @@ class SerialListener(threading.Thread):
                 with self.lock:
                     if not self.ser or not self.ser.is_open:
                         break
-                    # Non-blocking read with short timeout from Serial init
                     line = self.ser.readline().decode('utf-8', errors='ignore').strip()
                 
                 if line and self.on_message:
@@ -34,9 +39,9 @@ class SerialListener(threading.Thread):
                     self.on_disconnect()
             except Exception as e:
                 logger.error(f"Error in serial listener: {e}")
-                pass  # Prevent thread crash on other errors
+                pass
             
-            time.sleep(0.01) # Small sleep to prevent CPU hogging if readline returns immediately empty
+            time.sleep(0.01)
 
     def stop(self):
         self.running = False
@@ -50,10 +55,10 @@ class SerialService:
         self.on_message_callback = None
         self.on_connection_lost_callback = None
         
-        # Port cache to reduce expensive USB enumeration
         self._port_cache = None
         self._port_cache_time = 0
-        self._port_cache_duration = 2.0  # Cache for 2 seconds
+        self._port_cache_duration = 2.0
+        self._last_connected_port = None
 
     @property
     def is_connected(self):
@@ -61,7 +66,6 @@ class SerialService:
             return self.ser is not None and self.ser.is_open
 
     def check_physical_connection_health(self):
-        """Verify if the current port still physically exists on the system."""
         if not self.port:
             return False
             
@@ -69,8 +73,10 @@ class SerialService:
             available_ports = [p.device for p in serial.tools.list_ports.comports()]
             if self.port not in available_ports:
                 logger.warning(f"Physical port {self.port} no longer available")
-                # Trigger a cleaner disconnect if the port is gone but ser still thinks it's open
+                last_port = self.port
                 self.disconnect()
+                self._last_connected_port = last_port
+                self.on_connection_lost()
                 return False
             return True
         except Exception as e:
@@ -78,29 +84,22 @@ class SerialService:
             return False
 
     def get_available_ports(self, use_cache=True):
-        """Get available serial ports with optional caching."""
         current_time = time.time()
         
-        # Return cached result if valid
         if use_cache and self._port_cache is not None:
             if current_time - self._port_cache_time < self._port_cache_duration:
-                logger.debug("Returning cached port list")
                 return self._port_cache
         
-        # Fetch fresh port list
         try:
             ports = serial.tools.list_ports.comports()
-            # Filter out known Bluetooth/Virtual COM ports
             filtered_ports = []
             for port in ports:
-                # Check hardware ID for BTHENUM (Bluetooth Enumerable Device)
                 hwid = port.hwid.upper() if getattr(port, 'hwid', None) else ""
                 desc = port.description.lower() if getattr(port, 'description', None) else ""
                 
                 if 'BTHENUM' in hwid or 'bluetooth' in desc:
                     continue
                 
-                # Prioritize 'Monolith' devices, RP2040, or CH552 ch55xduino IDs
                 is_monolith = 'monolith' in desc.lower() or 'monolith' in hwid.lower()
                 is_rp2040 = '2E8A:0002' in hwid or '2E8A:0003' in hwid
                 is_ch552 = '1209:C550' in hwid
@@ -110,11 +109,8 @@ class SerialService:
                 else:
                     filtered_ports.append((port.device, port.description, port.hwid))
                 
-            # Update cache
             self._port_cache = filtered_ports
             self._port_cache_time = current_time
-            logger.debug(f"Found {len(filtered_ports)} viable serial ports (filtered {len(ports) - len(filtered_ports)} Bluetooth ports)")
-            
             return filtered_ports
         except Exception as e:
             logger.error(f"Error scanning serial ports: {e}")
@@ -122,7 +118,6 @@ class SerialService:
 
     def connect(self, port, baudrate=115200):
         with self.lock:
-            # Ensure previous connection is closed
             if self.ser and self.ser.is_open:
                 try:
                     self.ser.close()
@@ -130,21 +125,18 @@ class SerialService:
                     logger.warning(f"Error closing serial port: {e}")
             
             try:
-                # Timeout 0.1s for responsive disconnect
-                # Disable DSR/DTR and RTS/CTS hardware flow control BEFORE opening
-                # to prevent toggling GPIO0(D3) and RESET during connection
                 self.ser = serial.Serial(
                     port=port,
                     baudrate=baudrate,
                     timeout=0.1,
-                    dsrdtr=False,  # Disable DSR/DTR hardware flow control
-                    rtscts=False   # Disable RTS/CTS hardware flow control
+                    dsrdtr=False,
+                    rtscts=False
                 )
-                # Set DTR/RTS high. Native USB (RP2040) requires DTR to stream data.
                 self.ser.dtr = True
                 self.ser.rts = True
                 
                 self.port = port
+                self._last_connected_port = port
                 self.listener = SerialListener(
                     self.ser, 
                     self.lock, 
@@ -153,21 +145,18 @@ class SerialService:
                 )
                 self.listener.start()
                 
-                # Fetch version from firmware once connected
                 def request_version():
-                    time.sleep(1.0) # Give firmware and USB time to be fully ready
+                    time.sleep(1.0)
                     if self.ser and self.ser.is_open:
                         self.send_raw_command("GET_VERSION")
                 
                 threading.Thread(target=request_version, daemon=True).start()
-                
                 return True
             except Exception as e:
                 logger.error(f"Failed to connect to {port}: {e}")
                 return False
 
     def disconnect(self):
-        
         if self.listener:
             self.listener.stop()
             self.listener.join(timeout=0.2)
@@ -184,7 +173,6 @@ class SerialService:
             self.port = None
 
     def send_data(self, data):
-        """Sends data as a JSON string. Legacy for app-to-app communication if any."""
         with self.lock:
             if self.ser and self.ser.is_open:
                 try:
@@ -197,7 +185,6 @@ class SerialService:
             return False
 
     def send_raw_command(self, cmd_str):
-        """Sends a raw string command followed by a newline."""
         with self.lock:
             if self.ser and self.ser.is_open:
                 try:
@@ -215,3 +202,113 @@ class SerialService:
     def on_connection_lost(self):
         if self.on_connection_lost_callback:
             self.on_connection_lost_callback()
+
+class FlasherService:
+    def __init__(self, on_progress_callback=None, on_finished_callback=None):
+        self.on_progress = on_progress_callback
+        self.on_finished = on_finished_callback
+        self.is_flashing = False
+        self._cancel_flag = False
+
+    def flash(self, port, firmware_path, baud=115200):
+        if self.is_flashing:
+            return False, "Already flashing"
+
+        self.is_flashing = True
+        self._cancel_flag = False
+        
+        try:
+            logger.info(f"Starting RP2040 flash process on {port} with {firmware_path}")
+            if self.on_progress:
+                self.on_progress("Resetting device into bootloader mode...", 10)
+
+            try:
+                ser = serial.Serial(port, 1200)
+                ser.close()
+                logger.info("Sent 1200 baud reset to bootloader")
+            except Exception as e:
+                logger.warning(f"Could not reset on {port}: {e}. Device might already be in BOOTSEL.")
+
+            if self.on_progress:
+                self.on_progress("Waiting for RPI-RP2 USB drive...", 30)
+
+            drive = None
+            for _ in range(30):
+                if self._cancel_flag:
+                    self.is_flashing = False
+                    return False, "Cancelled"
+
+                try:
+                    drives_str = win32api.GetLogicalDriveStrings()
+                    drives = [d for d in drives_str.split('\x00') if d]
+                    for d in drives:
+                        try:
+                            vol_name = win32api.GetVolumeInformation(d)[0]
+                            if vol_name == "RPI-RP2":
+                                drive = d
+                                break
+                        except Exception:
+                            pass
+                except Exception as e:
+                    logger.debug(f"Error checking drives: {e}")
+
+                if drive:
+                    break
+                time.sleep(0.5)
+
+            if not drive:
+                err_msg = "RP2040 Bootloader drive (RPI-RP2) not found. Verify connection or press BOOTSEL."
+                logger.error(err_msg)
+                if self.on_finished:
+                    self.on_finished(False, err_msg)
+                return False, err_msg
+
+            if self.on_progress:
+                self.on_progress("Copying firmware to device...", 70)
+
+            if self._cancel_flag:
+                self.is_flashing = False
+                return False, "Cancelled"
+
+            try:
+                shutil.copy(firmware_path, drive)
+                logger.info(f"Successfully copied {firmware_path} to {drive}")
+                
+                def close_windows_delayed():
+                    for _ in range(6):
+                        time.sleep(0.3)
+                        self._close_rpi_explorer_window()
+                threading.Thread(target=close_windows_delayed, daemon=True).start()
+            except Exception as e:
+                err_msg = f"Failed to copy firmware file: {e}"
+                logger.error(err_msg)
+                if self.on_finished:
+                    self.on_finished(False, err_msg)
+                return False, err_msg
+
+            if self.on_progress:
+                self.on_progress("Flash completed successfully!", 100)
+
+            if self.on_finished:
+                self.on_finished(True, "Flash successful! Device restarting...")
+            return True, "Success"
+
+        except Exception as e:
+            logger.error(f"Flash exception: {e}")
+            if self.on_finished:
+                self.on_finished(False, str(e))
+            return False, str(e)
+        finally:
+            self.is_flashing = False
+
+    def _close_rpi_explorer_window(self):
+        def callback(hwnd, extra):
+            if win32gui.GetClassName(hwnd) == "CabinetWClass":
+                title = win32gui.GetWindowText(hwnd)
+                if "RPI-RP2" in title:
+                    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                    logger.info(f"Closed RPI-RP2 explorer window: '{title}'")
+        try:
+            win32gui.EnumWindows(callback, None)
+        except Exception as e:
+            logger.debug(f"Failed to enumerate windows: {e}")

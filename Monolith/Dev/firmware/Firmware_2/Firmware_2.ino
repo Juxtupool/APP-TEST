@@ -14,9 +14,8 @@ char knobMode[32] = "Standard";
 // ===========================================
 // FIRMWARE VERSION
 // ============================================
-const char FIRMWARE_VERSION[] = "2.2.1";
+const char FIRMWARE_VERSION[] = "2.2.0";
 // Version History:
-// 2.2.1 - Enhanced interrupt stability for encoder signals, improved serial command parsing robustness
 // 2.2.0 - Non-blocking Serial parsing, robust software debounce for encoder, constant 1ms polling loop
 // 2.1.0 - Renamed to Overcontrol. Enabled Keyboard HID for icon.
 // 2.0.0 - Migrated to RP2040-Zero. GPIO 0-5 for switches, GPIO 6-8 for rotary encoder.

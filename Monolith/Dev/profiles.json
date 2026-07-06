@@ -251,10 +251,15 @@
                             "value": "ArrowRight"
                         }
                     ]
+                },
+                "Notepad": {
+                    "name": "Notepad",
+                    "type": "launch",
+                    "path": "C:\\Windows\\notepad.exe"
                 }
             },
             "keys": {
-                "1": "Antigravity",
+                "1": "Notepad",
                 "2": "Previous Track",
                 "3": "test",
                 "4": "Play/Pause",
@@ -265,7 +270,7 @@
                 "knob_rotate_left": "Left",
                 "knob_rotate_right": "Right"
             },
-            "knob_mode": "Custom",
+            "knob_mode": "Standard",
             "origin": "community-profile",
             "linked_apps": [],
             "knob_speed": 1
@@ -273,10 +278,10 @@
     },
     "active_profile": "Desktop",
     "saved_colors": [
-        "#5fce61",
-        "#eda01d"
+        "#eda01d",
+        "#0091ff"
     ],
-    "accent_color": "#eda01d",
+    "accent_color": "#0091ff",
     "minimize_to_tray": true,
     "theme": "carbon-black"
 }
