@@ -1,9 +1,0 @@
-pywebview>=4.0.0
-Pillow>=9.0.0
-pystray>=0.19.0
-pyserial>=3.5
-psutil>=5.9.0
-pywin32>=305; sys_platform == 'win32'
-requests>=2.28.0
-pynput>=1.7.6
-esptool>=4.6.2
