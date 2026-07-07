@@ -632,8 +632,7 @@ class CommunityLibraryService:
             if response.status_code in [200, 201]:
                 try:
                     category_raw = macro_data.get('category', 'other')
-                    category_key = category_raw.lower()
-                    current_list = self.get_macros_in_category(category_key)
+                    self.get_all_macros()
                     mock_entry = macro_data.copy()
                     if '_metadata' not in mock_entry:
                         mock_entry['_metadata'] = {
@@ -645,9 +644,10 @@ class CommunityLibraryService:
                     if 'uploaded_at' not in mock_entry:
                         import datetime
                         mock_entry['uploaded_at'] = datetime.datetime.now().isoformat()
-                    exists = any(m.get('name') == mock_entry.get('name') for m in current_list)
-                    if not exists:
-                        current_list.insert(0, mock_entry)
+                    if 'all' in self._macros_cache:
+                        exists = any(m.get('name') == mock_entry.get('name') for m in self._macros_cache['all'])
+                        if not exists:
+                            self._macros_cache['all'].insert(0, mock_entry)
                 except Exception as e:
                     logger.warning(f"Failed to inject into cache: {e}")
                 return {"status": "success", "message": "Macro submitted for review!"}
