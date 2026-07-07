@@ -1,0 +1,16 @@
+{
+  "name": "Notepad",
+  "author": "ggqeg",
+  "description": "bsb",
+  "category": "office",
+  "tags": [
+    "gsdgd"
+  ],
+  "type": "macro",
+  "macro": {
+    "name": "Notepad",
+    "icon": "icons/Document/sticky-note-fill.svg",
+    "type": "launch",
+    "path": "C:\\Windows\\notepad.exe"
+  }
+}
