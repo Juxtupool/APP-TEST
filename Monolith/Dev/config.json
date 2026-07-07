@@ -12,7 +12,7 @@
     "firmware": {
         "flash_baudrate": 460800,
         "default_firmware_path": "firmware/build",
-        "current_version": "2.2.0"
+        "current_version": "2.2.1"
     },
     "knob": {
         "app_switcher_release_delay": 0.35,

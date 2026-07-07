@@ -9,10 +9,10 @@
     --text-secondary: hsl(215, 15%, 75%);
     --text-muted: hsl(215, 12%, 50%);
 
-    /* Branding - Premium Default Blue (Vercel-like blue) */
-    --accent-color: hsl(221.2, 83.2%, 53.3%);
-    --accent-hover: hsl(224.3, 76.3%, 48%);
-    --accent-glow: hsla(221.2, 83.2%, 53.3%, 0.15);
+    /* Branding - Premium Default Blue (0,145,255) */
+    --accent-color: hsl(205.9, 100%, 50%);
+    --accent-hover: hsl(205.9, 100%, 45%);
+    --accent-glow: hsla(205.9, 100%, 50%, 0.15);
 
     /* Functional */
     --border-color: hsla(0, 0%, 100%, 0.05);
@@ -1960,6 +1960,37 @@ input:checked+.slider:before {
     font-size: 0.8rem;
     margin: 0 2px;
     font-family: monospace;
+}
+
+.delay-input {
+    width: 42px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    border-radius: 4px;
+    text-align: center;
+    font-family: inherit;
+    font-size: inherit;
+    outline: none;
+    padding: 1px 2px;
+    margin: 0 2px;
+    transition: all 0.2s ease;
+}
+
+.delay-input:focus {
+    border-color: #60a5fa;
+    background: rgba(96, 165, 250, 0.1);
+    box-shadow: 0 0 4px rgba(96, 165, 250, 0.4);
+}
+
+.delay-input::-webkit-outer-spin-button,
+.delay-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.delay-input[type=number] {
+    -moz-appearance: textfield;
 }
 
 /* Progress Bar */

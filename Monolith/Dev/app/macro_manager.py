@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import time
 import shlex
 import logging
@@ -162,7 +163,10 @@ class MacroExecutionService:
         self.keyboard = KeyboardController()
         self.mouse = MouseController()
 
-    def execute_macro(self, macro):
+    def execute_macro(self, macro, depth=0):
+        if depth > 5:
+            logger.warning("Max macro nesting depth reached, potential infinite loop")
+            return
         if isinstance(macro, dict):
             macro_type = macro.get("type", "keys")
             
@@ -224,7 +228,7 @@ class MacroExecutionService:
             
             elif macro_type == "advanced":
                 actions = macro.get("actions", [])
-                self.execute_advanced_sequence(actions)
+                self.execute_advanced_sequence(actions, depth=depth)
                 return
             else:
                 sequence = macro.get("sequence", [])
@@ -267,7 +271,7 @@ class MacroExecutionService:
         for mod in reversed(modifiers):
             self.keyboard.release(mod)
 
-    def execute_advanced_sequence(self, actions):
+    def execute_advanced_sequence(self, actions, depth=0):
         for action in actions:
             act_type = action.get("type")
             val = action.get("value")
@@ -290,6 +294,12 @@ class MacroExecutionService:
             elif act_type == "key_up":
                 key_obj = self.get_key_object(val)
                 self.keyboard.release(key_obj)
+            elif act_type == "macro":
+                resolver = getattr(self, "macro_resolver", None)
+                if resolver:
+                    nested_macro = resolver(val)
+                    if nested_macro:
+                        self.execute_macro(nested_macro, depth=depth + 1)
 
     def get_key_object(self, key_str):
         key_map = {

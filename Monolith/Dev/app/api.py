@@ -526,70 +526,13 @@ class CommunityLibraryService:
         return response
     
     def get_categories(self, force_refresh: bool = False) -> List[str]:
-        if not self.api_base:
-            return []
-        if self._categories_cache and not force_refresh:
-            return self._categories_cache
-        try:
-            url = f"{self.api_base}/macros"
-            response = self._make_request('GET', url, timeout=10)
-            if response.status_code == 404:
-                return []
-            response.raise_for_status()
-            contents = response.json()
-            categories = [item['name'] for item in contents if item['type'] == 'dir']
-            self._categories_cache = categories
-            return categories
-        except Exception as e:
-            logger.error(f"Error fetching categories: {e}")
-            return []
+        macros = self.get_all_macros(force_refresh=force_refresh)
+        categories = set(m.get('category', 'other') for m in macros)
+        return sorted(list(categories))
     
-    def _fetch_single_macro(self, category: str, file: Dict) -> Optional[Dict]:
-        try:
-            macro_url = f"{self.raw_base}/macros/{category}/{file['name']}"
-            macro_response = self._make_request('GET', macro_url, timeout=10)
-            macro_response.raise_for_status()
-            macro_data = macro_response.json()
-            macro_data['_metadata'] = {
-                'category': category,
-                'filename': file['name'],
-                'download_url': macro_url,
-                'size': file.get('size', 0)
-            }
-            return macro_data
-        except Exception as e:
-            logger.warning(f"Failed to fetch macro {file['name']}: {e}")
-            return None
-            
     def get_macros_in_category(self, category: str, force_refresh: bool = False) -> List[Dict]:
-        if not self.api_base or not self.raw_base:
-            return []
-        cache_key = category
-        if cache_key in self._macros_cache and not force_refresh:
-            return self._macros_cache[cache_key]
-        try:
-            url = f"{self.api_base}/macros/{category}"
-            response = self._make_request('GET', url, timeout=10)
-            response.raise_for_status()
-            files = response.json()
-            json_files = [f for f in files if f['type'] == 'file' and f['name'].endswith('.json')]
-            macros = []
-            if json_files:
-                with ThreadPoolExecutor(max_workers=min(10, len(json_files))) as executor:
-                    future_to_file = {
-                        executor.submit(self._fetch_single_macro, category, file): file
-                        for file in json_files
-                    }
-                    for future in as_completed(future_to_file):
-                        result = future.result()
-                        if result:
-                            macros.append(result)
-            macros.sort(key=lambda x: x.get('_metadata', {}).get('filename', '').lower())
-            self._macros_cache[cache_key] = macros
-            return macros
-        except Exception as e:
-            logger.error(f"Error fetching macros in category {category}: {e}")
-            return []
+        macros = self.get_all_macros(force_refresh=force_refresh)
+        return [m for m in macros if m.get('category', '').lower() == category.lower()]
     
     def search_macros(self, query: str) -> List[Dict]:
         query_lower = query.lower()
@@ -608,26 +551,41 @@ class CommunityLibraryService:
         return results
     
     def get_all_macros(self, sort_by: str = 'name', force_refresh: bool = False) -> List[Dict]:
-        categories = self.get_categories(force_refresh=force_refresh)
-        if not categories:
+        if not self.raw_base:
             return []
-        all_macros = []
-        with ThreadPoolExecutor(max_workers=min(10, len(categories))) as executor:
-            future_to_category = {
-                executor.submit(self.get_macros_in_category, category, force_refresh): category
-                for category in categories
-            }
-            for future in as_completed(future_to_category):
-                try:
-                    category_macros = future.result()
-                    all_macros.extend(category_macros)
-                except Exception as e:
-                    logger.error(f"Error fetching macros in parallel: {e}")
+        if 'all' in self._macros_cache and not force_refresh:
+            all_macros = self._macros_cache['all']
+        else:
+            try:
+                url = f"{self.raw_base}/macros/manifest.json"
+                response = self._make_request('GET', url, timeout=10)
+                if response.status_code == 404:
+                    all_macros = []
+                else:
+                    response.raise_for_status()
+                    all_macros = response.json()
+                
+                # Setup metadata fallback for each macro in manifest
+                for macro in all_macros:
+                    if '_metadata' not in macro:
+                        macro['_metadata'] = {
+                            'category': macro.get('category', 'other'),
+                            'filename': f"{macro.get('name', 'unnamed')}.json",
+                            'download_url': f"{self.raw_base}/macros/{macro.get('category', 'other')}/{macro.get('name', 'unnamed')}.json",
+                            'size': 0
+                        }
+                self._macros_cache['all'] = all_macros
+            except Exception as e:
+                logger.error(f"Error fetching community macros manifest: {e}")
+                return []
+                
+        # Sort
+        sorted_macros = list(all_macros)
         if sort_by == 'name':
-            all_macros.sort(key=lambda x: x.get('name', '').lower())
+            sorted_macros.sort(key=lambda x: x.get('name', '').lower())
         elif sort_by == 'category':
-            all_macros.sort(key=lambda x: x.get('_metadata', {}).get('category', ''))
-        return all_macros
+            sorted_macros.sort(key=lambda x: x.get('category', '').lower())
+        return sorted_macros
     
     def generate_submission_url(self, macro_data: Dict) -> str:
         if not self.repo:
@@ -997,7 +955,7 @@ class UpdateManager:
             is_frozen = getattr(sys, 'frozen', False)
             current_pid = os.getpid()
             if is_frozen:
-                executable = sys.executable
+                executable = f'"{sys.executable}"'
             else:
                 executable = f'"{sys.executable}" "{self.app_root / "run.py"}"'
             kill_cmd = f'taskkill /PID {current_pid} /F'
@@ -1036,6 +994,7 @@ class Api:
         # Initialize simplified services
         self._profile_service = ProfileService(PROFILE_PATH)
         self._macro_execution_service = MacroExecutionService()
+        self._macro_execution_service.macro_resolver = self._resolve_macro_for_execution
         self._macro_recording_service = MacroRecordingService()
         self._window_control_service = WindowControlService()
         self._serial_service = SerialService()
@@ -1061,7 +1020,7 @@ class Api:
             
         self.tray_enabled = self._profiles.get("minimize_to_tray", False)
         self.current_theme = "dark"
-        self.current_accent_color = self._profiles.get("accent_color", "#2563eb")
+        self.current_accent_color = self._profiles.get("accent_color", "#0091ff")
         self.firmware_version = self._config.get('firmware', {}).get('current_version', 'Unknown')
         self.tray_icon = None
         self.tray_loop_running = True
@@ -1662,6 +1621,14 @@ class Api:
             if macro_name in system_macros:
                 self.execute_macro(system_macros[macro_name])
 
+    def _resolve_macro_for_execution(self, macro_name):
+        profile_data = self._profiles.get("profiles", {}).get(self._current_profile_name, {})
+        macro_data = profile_data.get("macros", {}).get(macro_name)
+        if macro_data:
+            return macro_data
+        system_macros = self._get_system_macros()
+        return system_macros.get(macro_name)
+
     def _get_system_macros(self):
         return {
             "Copy": {"name": "Copy", "sequence": ["Ctrl", "C"]},
@@ -1730,7 +1697,11 @@ class Api:
                     return
                 macro_name = profile_data.get("keys", {}).get(str(idx))
             if macro_name:
-                self._execute_macro_by_name(macro_name, profile_data)
+                if self._macro_recording_service._recording:
+                    # Suppress macro execution on PC during recording
+                    pass
+                else:
+                    self._execute_macro_by_name(macro_name, profile_data)
         except Exception as e:
             logger.error(f"Error handling serial command '{message}': {e}", exc_info=True)
             

@@ -1592,6 +1592,7 @@ const btnSaveMacro = document.getElementById('btn-save-macro');
 const btnCloseModal = document.querySelectorAll('.close-modal');
 const btnRecordToggle = document.getElementById('btn-record-toggle');
 const btnClearMacro = document.getElementById('btn-clear-macro');
+const btnAddDelay = document.getElementById('btn-add-delay');
 const keysDisplay = document.getElementById('keys-display');
 
 const btnBrowseFile = document.getElementById('btn-browse-file');
@@ -1629,6 +1630,13 @@ btnCloseModal.forEach(btn => {
 
 btnRecordToggle.addEventListener('click', toggleRecording);
 btnClearMacro.addEventListener('click', clearRecording);
+
+if (btnAddDelay) {
+    btnAddDelay.addEventListener('click', () => {
+        recordedKeys.push({ type: 'delay', value: 500 });
+        updateRecorderDisplay();
+    });
+}
 
 const singleEventKeys = new Set([
     'AudioVolumeMute', 'AudioVolumeDown', 'AudioVolumeUp',
@@ -2267,7 +2275,23 @@ function updateRecorderDisplay() {
         if (action.type === 'delay') {
             const span = document.createElement('span');
             span.className = 'delay-badge';
-            span.innerHTML = `&rarr; ${action.value}ms &rarr;`;
+            span.innerHTML = `&rarr; <input type="number" class="delay-input" value="${action.value}" min="0">ms &rarr;`;
+            
+            const input = span.querySelector('input');
+            input.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= 0) {
+                    action.value = val;
+                }
+            });
+            keysDisplay.appendChild(span);
+        } else if (action.type === 'macro') {
+            const span = document.createElement('span');
+            span.className = 'key-badge macro-badge';
+            span.style.borderColor = '#3b82f6';
+            span.style.color = '#60a5fa';
+            span.style.borderStyle = 'dashed';
+            span.innerHTML = `<i class="fa-solid fa-bolt"></i> ${action.value}`;
             keysDisplay.appendChild(span);
         } else if (action.type === 'key') {
             // Merged single press
@@ -2366,6 +2390,18 @@ window.onSerialMessage = (message) => {
     // Visual Feedback
     if (message.startsWith("KEY_") && message.endsWith("_PRESSED")) {
         const id = parseInt(message.split("_")[1]);
+
+        // If recording, capture macro keypresses
+        if (isRecording) {
+            const activeProfileData = profiles[currentProfile];
+            const macroName = activeProfileData && activeProfileData.keys ? activeProfileData.keys[id] : null;
+            if (macroName) {
+                recordedKeys.push({ type: 'macro', value: macroName });
+                updateRecorderDisplay();
+                return;
+            }
+        }
+
         const btn = document.querySelector(`.key-btn[data-id="${id}"]`);
         if (btn) {
             btn.classList.add('active-press');
