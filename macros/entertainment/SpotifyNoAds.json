@@ -1,0 +1,16 @@
+{
+  "name": "Spotify (No Ads)",
+  "author": "Meow",
+  "description": "Needs Spicetify installed already",
+  "category": "entertainment",
+  "tags": [
+    "Spotify"
+  ],
+  "type": "macro",
+  "macro": {
+    "name": "Spotify (No Ads)",
+    "icon": "icons/Logos/spotify-fill.svg",
+    "type": "command",
+    "command": "spicetify auto"
+  }
+}
