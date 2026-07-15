@@ -1,0 +1,34 @@
+{
+  "name": "Flow test",
+  "author": "lfow",
+  "description": "Flow test",
+  "category": "office",
+  "tags": [],
+  "type": "macro",
+  "macro": {
+    "name": "Flow test",
+    "type": "advanced",
+    "actions": [
+      {
+        "type": "macro",
+        "value": "Notepad"
+      },
+      {
+        "type": "delay",
+        "value": 500
+      },
+      {
+        "type": "macro",
+        "value": "test"
+      },
+      {
+        "type": "delay",
+        "value": 1
+      },
+      {
+        "type": "macro",
+        "value": "Play/Pause"
+      }
+    ]
+  }
+}
