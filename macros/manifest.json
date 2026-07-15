@@ -1,5 +1,16 @@
 [
   {
+    "name": "Octaveview",
+    "author": "ugcgj",
+    "description": "octaveview",
+    "category": "creative",
+    "tags": [],
+    "uploaded_at": "2026-07-15T21:51:19.134793",
+    "type": "launch",
+    "path": "https://octaveview.com",
+    "origin": "community"
+  },
+  {
     "name": "Flow Test",
     "author": "Upool",
     "description": "Flow Test",
