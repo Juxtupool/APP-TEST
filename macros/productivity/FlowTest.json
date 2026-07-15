@@ -1,0 +1,90 @@
+{
+  "name": "Flow Test",
+  "author": "Upool",
+  "description": "Flow Test",
+  "category": "productivity",
+  "tags": [],
+  "type": "macro",
+  "macro": {
+    "name": "Flow Test",
+    "type": "advanced",
+    "actions": [
+      {
+        "type": "macro",
+        "value": "Notepad"
+      },
+      {
+        "type": "delay",
+        "value": 500
+      },
+      {
+        "type": "macro",
+        "value": "Play/Pause"
+      },
+      {
+        "type": "delay",
+        "value": 500
+      },
+      {
+        "type": "key_down",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "P"
+      },
+      {
+        "type": "key_up",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "U"
+      },
+      {
+        "type": "key",
+        "value": "L"
+      },
+      {
+        "type": "key",
+        "value": "A"
+      },
+      {
+        "type": "key",
+        "value": "K"
+      },
+      {
+        "type": "key",
+        "value": "Space"
+      },
+      {
+        "type": "key_down",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "N"
+      },
+      {
+        "type": "key_up",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "A"
+      },
+      {
+        "type": "key",
+        "value": "Y"
+      },
+      {
+        "type": "key",
+        "value": "A"
+      },
+      {
+        "type": "key",
+        "value": "K"
+      }
+    ]
+  }
+}
