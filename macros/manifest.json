@@ -1,10 +1,101 @@
 [
   {
+    "name": "Flow Test",
+    "author": "Upool",
+    "description": "Flow Test",
+    "category": "productivity",
+    "tags": [],
+    "uploaded_at": "2026-07-15T21:37:01.748173",
+    "type": "advanced",
+    "actions": [
+      {
+        "type": "macro",
+        "value": "Notepad"
+      },
+      {
+        "type": "delay",
+        "value": 500
+      },
+      {
+        "type": "macro",
+        "value": "Play/Pause"
+      },
+      {
+        "type": "delay",
+        "value": 500
+      },
+      {
+        "type": "key_down",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "P"
+      },
+      {
+        "type": "key_up",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "U"
+      },
+      {
+        "type": "key",
+        "value": "L"
+      },
+      {
+        "type": "key",
+        "value": "A"
+      },
+      {
+        "type": "key",
+        "value": "K"
+      },
+      {
+        "type": "key",
+        "value": "Space"
+      },
+      {
+        "type": "key_down",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "N"
+      },
+      {
+        "type": "key_up",
+        "value": "Shift"
+      },
+      {
+        "type": "key",
+        "value": "A"
+      },
+      {
+        "type": "key",
+        "value": "Y"
+      },
+      {
+        "type": "key",
+        "value": "A"
+      },
+      {
+        "type": "key",
+        "value": "K"
+      }
+    ]
+  },
+  {
     "name": "Open Notepad",
     "author": "Juxtupool",
     "description": "Launches the Windows Notepad text editor",
     "category": "productivity",
-    "tags": ["notepad", "text", "editor"],
+    "tags": [
+      "notepad",
+      "text",
+      "editor"
+    ],
     "type": "launch",
     "path": "C:\\Windows\\notepad.exe",
     "uploaded_at": "2026-07-07T20:00:00Z"
@@ -14,7 +105,11 @@
     "author": "Juxtupool",
     "description": "Opens Google Search in your default web browser",
     "category": "productivity",
-    "tags": ["google", "search", "web"],
+    "tags": [
+      "google",
+      "search",
+      "web"
+    ],
     "type": "launch",
     "path": "https://www.google.com",
     "uploaded_at": "2026-07-07T20:00:00Z"
@@ -24,16 +119,40 @@
     "author": "Juxtupool",
     "description": "Quickly copy selected text, wait, and paste it",
     "category": "productivity",
-    "tags": ["clipboard", "utility"],
+    "tags": [
+      "clipboard",
+      "utility"
+    ],
     "type": "advanced",
     "actions": [
-      { "type": "key_down", "value": "Ctrl" },
-      { "type": "key", "value": "C" },
-      { "type": "key_up", "value": "Ctrl" },
-      { "type": "delay", "value": 500 },
-      { "type": "key_down", "value": "Ctrl" },
-      { "type": "key", "value": "V" },
-      { "type": "key_up", "value": "Ctrl" }
+      {
+        "type": "key_down",
+        "value": "Ctrl"
+      },
+      {
+        "type": "key",
+        "value": "C"
+      },
+      {
+        "type": "key_up",
+        "value": "Ctrl"
+      },
+      {
+        "type": "delay",
+        "value": 500
+      },
+      {
+        "type": "key_down",
+        "value": "Ctrl"
+      },
+      {
+        "type": "key",
+        "value": "V"
+      },
+      {
+        "type": "key_up",
+        "value": "Ctrl"
+      }
     ],
     "uploaded_at": "2026-07-07T20:05:00Z"
   },
@@ -42,7 +161,11 @@
     "author": "Juxtupool",
     "description": "Runs spicetify auto command in terminal",
     "category": "entertainment",
-    "tags": ["spotify", "music", "spicetify"],
+    "tags": [
+      "spotify",
+      "music",
+      "spicetify"
+    ],
     "type": "command",
     "command": "spicetify auto",
     "uploaded_at": "2026-07-07T20:10:00Z"
@@ -52,7 +175,11 @@
     "author": "Juxtupool",
     "description": "Profile for software developers with common shortcuts",
     "category": "productivity",
-    "tags": ["development", "shortcuts", "git"],
+    "tags": [
+      "development",
+      "shortcuts",
+      "git"
+    ],
     "type": "profile",
     "profile": {
       "macros": {
@@ -65,11 +192,26 @@
           "name": "Build Project",
           "type": "advanced",
           "actions": [
-            { "type": "key_down", "value": "Ctrl" },
-            { "type": "key_down", "value": "Shift" },
-            { "type": "key", "value": "B" },
-            { "type": "key_up", "value": "Ctrl" },
-            { "type": "key_up", "value": "Shift" }
+            {
+              "type": "key_down",
+              "value": "Ctrl"
+            },
+            {
+              "type": "key_down",
+              "value": "Shift"
+            },
+            {
+              "type": "key",
+              "value": "B"
+            },
+            {
+              "type": "key_up",
+              "value": "Ctrl"
+            },
+            {
+              "type": "key_up",
+              "value": "Shift"
+            }
           ]
         }
       },
