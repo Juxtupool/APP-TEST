@@ -1,5 +1,16 @@
 [
   {
+    "name": "Antigravity",
+    "author": "Dev Int",
+    "description": "Launch Antigravity",
+    "category": "productivity",
+    "tags": [],
+    "uploaded_at": "2026-07-17T17:07:44.793471",
+    "icon": "icons/Logos/gemini-fill.svg",
+    "type": "launch",
+    "path": "C:\\Users\\pulak\\AppData\\Local\\Programs\\Antigravity IDE\\Antigravity IDE.exe"
+  },
+  {
     "name": "Octaveview",
     "author": "ugcgj",
     "description": "octaveview",
