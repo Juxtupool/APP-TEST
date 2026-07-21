@@ -282,16 +282,6 @@ def create_readme():
 - USB port for NodeMCU device
 - Internet connection (first run only, for WebView2)
 
-## Configuration
-
-Create a `.env` file in the same directory as the executable with your GitHub token:
-
-```
-GITHUB_TOKEN=your_github_token_here
-```
-
-See `.env.example` for more details.
-
 ## Troubleshooting
 
 **WebView2 Installation Issues:**

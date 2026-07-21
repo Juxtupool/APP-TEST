@@ -19,9 +19,8 @@ Before writing code or running the application, make sure the development enviro
   ```powershell
   pip install -r requirements.txt
   ```
-- [ ] **Configure Environment Secrets**:
-  - Copy `.env.example` to `.env`.
-  - Edit `.env` and configure `GITHUB_TOKEN=your_github_token_here` (needed for community features).
+- [ ] **Configure Environment**:
+  - Copy `.env.example` to `.env` if custom environment settings are needed.
 - [ ] **Configure Application Settings**:
   - Verify `config.json` exists in `Monolith/Dev/` (or copy from `config.template.json` if missing).
 
@@ -53,11 +52,7 @@ Verify that the application is running correctly in the local environment.
   python run.py
   ```
 - [ ] **Verify WebView2 Startup**:
-  - Check if WebView2 bootstrapper starts (it checks for the runtime and downloads if missing).
-  - Launch with debug mode if needed:
-    ```powershell
-    python app/utils/webview2_bootstrapper.py --interactive
-    ```
+  - Verify `pywebview` window launches and renders the HTML/JS application layout cleanly.
 - [ ] **Hardware Communication**:
   - Connect NodeMCU/RP2040 and toggle connection in the sidebar.
   - Ensure the system tray icon updates status (green = connected, gray = disconnected).

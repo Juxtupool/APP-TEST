@@ -101,8 +101,7 @@ def check_configurations():
     if not env_path.exists():
         print("  [WARN] .env file is missing.")
         if env_example_path.exists():
-            print("    Please copy .env.example to .env and configure GITHUB_TOKEN.")
-        passed = False
+            print("    Please copy .env.example to .env if custom environment variables are needed.")
     else:
         print("  [OK] .env file exists.")
         

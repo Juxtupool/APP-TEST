@@ -29,11 +29,13 @@
     },
     "github": {
         "firmware_repo": "Juxtupool/APP-TEST",
-        "app_repo": "Juxtupool/APP-TEST",
-        "community_repo": "Juxtupool/APP-TEST",
-        "token": ""
+        "app_repo": "Juxtupool/APP-TEST"
     },
     "community": {
         "submission_url": "https://solitary-cake-d872.pulakataranga.workers.dev/"
-    }
+    },
+    "pocketbase": {
+        "url": "http://127.0.0.1:8090"
+    },
+    "starred_macros": []
 }

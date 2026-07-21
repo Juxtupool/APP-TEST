@@ -4,6 +4,7 @@ import json
 import time
 import shutil
 import logging
+from logging.handlers import RotatingFileHandler
 import threading
 import queue
 import base64
@@ -13,7 +14,7 @@ import re
 import functools
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Optional, Callable, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 import win32api
@@ -48,7 +49,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(str(log_file)),
+        RotatingFileHandler(str(log_file), maxBytes=5*1024*1024, backupCount=3, encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -110,11 +111,6 @@ def load_config(config_path: Path, exe_dir: Path) -> Dict:
     try:
         with open(config_path, 'r') as f:
             config = json.load(f)
-        env_token = os.getenv('GITHUB_TOKEN', '').strip()
-        if env_token:
-            if 'github' not in config:
-                config['github'] = {}
-            config['github']['token'] = env_token
         return config
     except Exception as e:
         logger.error(f"Error loading config: {e}")
@@ -286,8 +282,42 @@ class AppIconService:
             return icon_data
         return None
 
+    def _find_via_registry(self, app_name: str) -> Optional[str]:
+        for root in [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]:
+            for path in [
+                rf"Software\Microsoft\Windows\CurrentVersion\App Paths\{app_name}",
+                rf"Software\Wow6432Node\Microsoft\Windows\CurrentVersion\App Paths\{app_name}"
+            ]:
+                try:
+                    with winreg.OpenKey(root, path) as key:
+                        val, _ = winreg.QueryValueEx(key, "")
+                        if val:
+                            val = val.strip('"')
+                            if os.path.exists(val):
+                                return val
+                except WindowsError:
+                    pass
+        return None
+
     def _find_executable_path(self, app_name: str) -> Optional[str]:
         try:
+            # 1. Registry query (instant & native App Paths)
+            reg_path = self._find_via_registry(app_name)
+            if reg_path:
+                return reg_path
+
+            # 2. Known paths check (instant)
+            known_paths = self._get_known_app_paths(app_name.lower())
+            for path in known_paths:
+                if os.path.exists(path):
+                    return path
+
+            # 3. System32 check (instant)
+            windows_path = os.path.join(os.environ.get('SystemRoot', 'C:\\Windows'), 'System32', app_name)
+            if os.path.exists(windows_path):
+                return windows_path
+
+            # 4. Running processes (slower fallback)
             for proc in psutil.process_iter(['name', 'exe']):
                 try:
                     if proc.info['name'] and proc.info['name'].lower() == app_name.lower():
@@ -295,17 +325,12 @@ class AppIconService:
                             return proc.info['exe']
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            
-            known_paths = self._get_known_app_paths(app_name.lower())
-            for path in known_paths:
-                if os.path.exists(path):
-                    return path
-            
+
+            # 5. Program Files directory search (slowest fallback - removed slow APPDATA check)
             search_dirs = [
                 os.environ.get('ProgramFiles', 'C:\\Program Files'),
                 os.environ.get('ProgramFiles(x86)', 'C:\\Program Files (x86)'),
                 os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs'),
-                os.environ.get('APPDATA', ''),
             ]
             for base_dir in search_dirs:
                 if not os.path.exists(base_dir):
@@ -319,10 +344,7 @@ class AppIconService:
                                 return exe_path
                 except (PermissionError, OSError):
                     continue
-            
-            windows_path = os.path.join(os.environ.get('SystemRoot', 'C:\\Windows'), 'System32', app_name)
-            if os.path.exists(windows_path):
-                return windows_path
+
             return None
         except Exception as e:
             logger.error(f"Error finding executable path for {app_name}: {e}")
@@ -466,15 +488,10 @@ class AppIconService:
 class CommunityLibraryService:
     def __init__(self, config: Dict):
         self.config = config
-        self.repo = config.get('github', {}).get('community_repo', '')
-        self.github_token = config.get('github', {}).get('token', None)
-        
-        if self.repo:
-            self.api_base = f"https://api.github.com/repos/{self.repo}/contents"
-            self.raw_base = f"https://raw.githubusercontent.com/{self.repo}/main"
-        else:
-            self.api_base = None
-            self.raw_base = None
+        self.pb_url = config.get('pocketbase', {}).get('url', '')
+        if not self.pb_url:
+            self.pb_url = config.get('community', {}).get('submission_url', '')
+        self.pb_url = self.pb_url.rstrip('/')
         
         self.session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=15, pool_maxsize=30)
@@ -489,42 +506,26 @@ class CommunityLibraryService:
     
     def set_window(self, window):
         self._window = window
-    
-    def _get_headers(self) -> Dict:
-        headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Overcontrol'}
-        token = self.config.get('github', {}).get('token', None)
-        if token:
-            headers['Authorization'] = f'token {token}'
-        return headers
-
-    def _make_request(self, method: str, url: str, **kwargs) -> requests.Response:
-        if 'headers' not in kwargs:
-            kwargs['headers'] = self._get_headers()
+        
+    def _load_local_manifest(self) -> List[Dict]:
         try:
-            if method.upper() == 'GET':
-                response = self.session.get(url, **kwargs)
-            elif method.upper() == 'POST':
-                response = self.session.post(url, **kwargs)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
-        except Exception as e:
-            logger.error(f"HTTP request error: {e}")
-            raise e
-            
-        if response.status_code == 401:
-            if 'Authorization' in kwargs.get('headers', {}) or self.config.get('github', {}).get('token'):
-                if 'github' in self.config:
-                    self.config['github']['token'] = None
-                self.github_token = None
-                headers = kwargs.get('headers', {}).copy()
-                headers.pop('Authorization', None)
-                kwargs['headers'] = headers
-                if method.upper() == 'GET':
-                    response = self.session.get(url, **kwargs)
-                elif method.upper() == 'POST':
-                    response = self.session.post(url, **kwargs)
-        return response
-    
+            local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'macros'))
+            local_path = os.path.join(local_dir, 'manifest.json')
+            if os.path.exists(local_path):
+                with open(local_path, 'r', encoding='utf-8') as lf:
+                    manifest = json.load(lf)
+                    for macro in manifest:
+                        if '_metadata' not in macro:
+                            macro['_metadata'] = {
+                                'category': macro.get('category', 'other'),
+                                'filename': f"{macro.get('name', 'unnamed')}.json",
+                                'size': 0
+                            }
+                    return manifest
+        except Exception as le:
+            logger.warning(f"Could not load local manifest.json: {le}")
+        return []
+
     def get_categories(self, force_refresh: bool = False) -> List[str]:
         macros = self.get_all_macros(force_refresh=force_refresh)
         categories = set(m.get('category', 'other') for m in macros)
@@ -533,6 +534,61 @@ class CommunityLibraryService:
     def get_macros_in_category(self, category: str, force_refresh: bool = False) -> List[Dict]:
         macros = self.get_all_macros(force_refresh=force_refresh)
         return [m for m in macros if m.get('category', '').lower() == category.lower()]
+    
+    def get_all_macros(self, sort_by: str = 'name', force_refresh: bool = False) -> List[Dict]:
+        if not self.pb_url:
+            return self._load_local_manifest()
+            
+        if 'all' in self._macros_cache and not force_refresh:
+            all_macros = self._macros_cache['all']
+        else:
+            try:
+                url = f"{self.pb_url}/api/collections/macros/records?filter=(approved=true)&perPage=500"
+                response = self.session.get(url, timeout=10)
+                if response.status_code == 200:
+                    records = response.json().get('items', [])
+                    all_macros = []
+                    for record in records:
+                        macro = {
+                            "id": record.get("id"),
+                            "name": record.get("name"),
+                            "author": record.get("author"),
+                            "description": record.get("description"),
+                            "category": record.get("category", "other"),
+                            "tags": record.get("tags", []),
+                            "type": record.get("type", "macro"),
+                            "likes": record.get("likes", 0),
+                            "downloads": record.get("downloads", 0),
+                            "uploaded_at": record.get("created"),
+                        }
+                        if record.get("type") == "profile":
+                            macro["profile"] = record.get("profile_data", {})
+                        else:
+                            macro["macro"] = record.get("macro_data", {})
+                            for k, v in record.get("macro_data", {}).items():
+                                if k != "name":
+                                    macro[k] = v
+                        
+                        macro['_metadata'] = {
+                            'category': record.get('category', 'other'),
+                            'filename': f"{record.get('name', 'unnamed')}.json",
+                            'size': 0
+                        }
+                        all_macros.append(macro)
+                    self._macros_cache['all'] = all_macros
+                else:
+                    logger.warning(f"PocketBase returned status {response.status_code}")
+                    all_macros = self._load_local_manifest()
+            except Exception as e:
+                logger.error(f"Error fetching community macros from PocketBase: {e}")
+                all_macros = self._load_local_manifest()
+                
+        sorted_macros = list(all_macros)
+        if sort_by == 'name':
+            sorted_macros.sort(key=lambda x: x.get('name', '').lower())
+        elif sort_by == 'category':
+            sorted_macros.sort(key=lambda x: x.get('category', '').lower())
+        return sorted_macros
     
     def search_macros(self, query: str) -> List[Dict]:
         query_lower = query.lower()
@@ -545,116 +601,167 @@ class CommunityLibraryService:
             if query_lower in macro.get('description', '').lower():
                 results.append(macro)
                 continue
-            tags = macro.get('tags', [])
-            if any(query_lower in tag.lower() for tag in tags):
-                results.append(macro)
         return results
-    
-    def get_all_macros(self, sort_by: str = 'name', force_refresh: bool = False) -> List[Dict]:
-        if not self.raw_base:
-            return []
-        if 'all' in self._macros_cache and not force_refresh:
-            all_macros = self._macros_cache['all']
-        else:
-            try:
-                url = f"{self.raw_base}/macros/manifest.json"
-                response = self._make_request('GET', url, timeout=10)
-                if response.status_code == 404:
-                    all_macros = []
-                else:
-                    response.raise_for_status()
-                    all_macros = response.json()
-                
-                # Setup metadata fallback for each macro in manifest
-                for macro in all_macros:
-                    if '_metadata' not in macro:
-                        macro['_metadata'] = {
-                            'category': macro.get('category', 'other'),
-                            'filename': f"{macro.get('name', 'unnamed')}.json",
-                            'download_url': f"{self.raw_base}/macros/{macro.get('category', 'other')}/{macro.get('name', 'unnamed')}.json",
-                            'size': 0
-                        }
-                self._macros_cache['all'] = all_macros
-            except Exception as e:
-                logger.error(f"Error fetching community macros manifest: {e}")
-                return []
-                
-        # Sort
-        sorted_macros = list(all_macros)
-        if sort_by == 'name':
-            sorted_macros.sort(key=lambda x: x.get('name', '').lower())
-        elif sort_by == 'category':
-            sorted_macros.sort(key=lambda x: x.get('category', '').lower())
-        return sorted_macros
-    
-    def generate_submission_url(self, macro_data: Dict) -> str:
-        if not self.repo:
-            return ''
-        import urllib.parse
-        title = f"[Macro Submission] {macro_data.get('name', 'Unnamed Macro')}"
-        body = f"""### Macro Submission
-**Name:** {macro_data.get('name', '')}
-**Description:** {macro_data.get('description', '')}
-**Category:** {macro_data.get('category', 'productivity')}
-**Tags:** {', '.join(macro_data.get('tags', []))}
-### Macro JSON
-```json
-{json.dumps(macro_data, indent=2)}
-```
----
-*Submitted via Overcontrol*
-"""
-        base_url = f"https://github.com/{self.repo}/issues/new"
-        params = {'title': title, 'body': body, 'labels': 'macro-submission'}
-        return f"{base_url}?{urllib.parse.urlencode(params)}"
-    
+
     def upload_macro(self, macro_data: Dict) -> Dict:
-        submission_url = self.config.get('community', {}).get('submission_url')
-        if not submission_url:
-             submission_url = self.config.get('github', {}).get('submission_url')
-        if not submission_url:
-            return {"status": "error", "message": "Submission URL not configured. Check config.json"}
         try:
+            if not self.pb_url:
+                return {"status": "error", "message": "PocketBase not configured. Check config.json"}
+                
             if not macro_data.get('name'):
-                 return {"status": "error", "message": "Invalid data: Missing name"}
+                return {"status": "error", "message": "Invalid data: Missing name"}
+                
             ctype = macro_data.get('type', 'macro')
             if ctype == 'profile':
                 if not macro_data.get('profile'):
                     return {"status": "error", "message": "Invalid profile data"}
+                profile_data = macro_data.get('profile', {})
+                macro_content = {}
             else:
                 base = macro_data.get('macro', macro_data)
-                valid_keys = ['actions', 'command', 'path', 'commands']
+                valid_keys = ['actions', 'command', 'path', 'commands', 'text']
                 has_content = any(key in base for key in valid_keys)
                 if not has_content:
                     return {"status": "error", "message": "Invalid macro data"}
+                profile_data = {}
+                macro_content = base
 
-            response = self.session.post(submission_url, json=macro_data, timeout=15)
+            payload = {
+                "name": macro_data.get("name"),
+                "author": macro_data.get("author", "Anonymous"),
+                "description": macro_data.get("description", ""),
+                "category": macro_data.get("category", "other"),
+                "tags": macro_data.get("tags", []),
+                "type": ctype,
+                "macro_data": macro_content,
+                "profile_data": profile_data,
+                "approved": False
+            }
+
+            url = f"{self.pb_url}/api/collections/macros/records"
+            response = self.session.post(url, json=payload, timeout=10)
+            
             if response.status_code in [200, 201]:
-                try:
-                    category_raw = macro_data.get('category', 'other')
-                    self.get_all_macros()
-                    mock_entry = macro_data.copy()
-                    if '_metadata' not in mock_entry:
-                        mock_entry['_metadata'] = {
-                            'category': category_raw,
-                            'filename': f"{macro_data.get('name')}.json",
-                            'download_url': None,
-                            'size': 0
-                        }
-                    if 'uploaded_at' not in mock_entry:
-                        import datetime
-                        mock_entry['uploaded_at'] = datetime.datetime.now().isoformat()
-                    if 'all' in self._macros_cache:
-                        exists = any(m.get('name') == mock_entry.get('name') for m in self._macros_cache['all'])
-                        if not exists:
-                            self._macros_cache['all'].insert(0, mock_entry)
-                except Exception as e:
-                    logger.warning(f"Failed to inject into cache: {e}")
+                logger.info("Successfully uploaded macro to PocketBase")
+                self._update_local_manifest(macro_data)
                 return {"status": "success", "message": "Macro submitted for review!"}
             else:
-                return {"status": "error", "message": f"Server rejected submission (Code {response.status_code})"}
+                error_msg = f"PocketBase submission failed (Status {response.status_code})"
+                try:
+                    error_json = response.json()
+                    if 'message' in error_json:
+                        error_msg += f": {error_json['message']}"
+                except Exception:
+                    pass
+                return {"status": "error", "message": error_msg}
         except Exception as e:
             return {"status": "error", "message": f"Connection failed: {str(e)}"}
+
+    def _update_local_manifest(self, macro_data: Dict):
+        try:
+            import datetime
+            entry = {
+                "name": macro_data.get("name"),
+                "author": macro_data.get("author"),
+                "description": macro_data.get("description"),
+                "category": macro_data.get("category", "other"),
+                "tags": macro_data.get("tags", []),
+                "uploaded_at": datetime.datetime.now().isoformat()
+            }
+            ctype = macro_data.get("type", "macro")
+            if ctype == "profile":
+                entry["type"] = "profile"
+                entry["profile"] = macro_data.get("profile", {})
+            else:
+                macro_content = macro_data.get("macro", {})
+                for k, v in macro_content.items():
+                    if k != "name":
+                        entry[k] = v
+
+            local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'macros'))
+            local_path = os.path.join(local_dir, 'manifest.json')
+            
+            os.makedirs(local_dir, exist_ok=True)
+            
+            local_manifest = []
+            if os.path.exists(local_path):
+                try:
+                    with open(local_path, 'r', encoding='utf-8') as lf:
+                        local_manifest = json.load(lf)
+                except Exception:
+                    local_manifest = []
+            
+            local_manifest = [item for item in local_manifest if item.get("name") != entry.get("name")]
+            local_manifest.insert(0, entry)
+            
+            with open(local_path, 'w', encoding='utf-8') as lf:
+                json.dump(local_manifest, lf, indent=2)
+            logger.info(f"Successfully updated local manifest.json at {local_path}")
+        except Exception as le:
+            logger.warning(f"Could not update local manifest.json: {le}")
+
+    def increment_download(self, macro_id: str):
+        if not self.pb_url or not macro_id:
+            return
+        try:
+            url = f"{self.pb_url}/api/collections/macros/records/{macro_id}"
+            response = self.session.get(url, timeout=5)
+            if response.status_code == 200:
+                record = response.json()
+                current_downloads = record.get("downloads", 0)
+                patch_response = self.session.patch(url, json={"downloads": current_downloads + 1}, timeout=5)
+                if patch_response.status_code == 200:
+                    logger.info(f"Incremented downloads for macro {macro_id} to {current_downloads + 1}")
+        except Exception as e:
+            logger.warning(f"Failed to increment downloads on PocketBase: {e}")
+
+    def increment_like(self, macro_id: str) -> Dict:
+        if not self.pb_url or not macro_id:
+            return {"status": "error", "message": "PocketBase not configured"}
+        try:
+            url = f"{self.pb_url}/api/collections/macros/records/{macro_id}"
+            response = self.session.get(url, timeout=5)
+            if response.status_code == 200:
+                record = response.json()
+                current_likes = record.get("likes", 0)
+                new_likes = current_likes + 1
+                patch_response = self.session.patch(url, json={"likes": new_likes}, timeout=5)
+                if patch_response.status_code == 200:
+                    logger.info(f"Incremented likes (stars) for macro {macro_id} to {new_likes}")
+                    if 'all' in self._macros_cache:
+                        for m in self._macros_cache['all']:
+                            if m.get('id') == macro_id:
+                                m['likes'] = new_likes
+                                break
+                    return {"status": "success", "likes": new_likes}
+            return {"status": "error", "message": "Failed to update record"}
+        except Exception as e:
+            logger.warning(f"Failed to increment likes on PocketBase: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def decrement_like(self, macro_id: str) -> Dict:
+        if not self.pb_url or not macro_id:
+            return {"status": "error", "message": "PocketBase not configured"}
+        try:
+            url = f"{self.pb_url}/api/collections/macros/records/{macro_id}"
+            response = self.session.get(url, timeout=5)
+            if response.status_code == 200:
+                record = response.json()
+                current_likes = record.get("likes", 0)
+                new_likes = max(0, current_likes - 1)
+                patch_response = self.session.patch(url, json={"likes": new_likes}, timeout=5)
+                if patch_response.status_code == 200:
+                    logger.info(f"Decremented likes (stars) for macro {macro_id} to {new_likes}")
+                    if 'all' in self._macros_cache:
+                        for m in self._macros_cache['all']:
+                            if m.get('id') == macro_id:
+                                m['likes'] = new_likes
+                                break
+                    return {"status": "success", "likes": new_likes}
+            return {"status": "error", "message": "Failed to update record"}
+        except Exception as e:
+            logger.warning(f"Failed to decrement likes on PocketBase: {e}")
+            return {"status": "error", "message": str(e)}
 
     def clear_cache(self):
         self._categories_cache = None
@@ -667,18 +774,13 @@ class FirmwareUpdateService:
         self.app_repo = config.get('github', {}).get('app_repo', '')
         self.current_firmware_version = config.get('firmware', {}).get('current_version', '0.0.0')
         self.current_app_version = config.get('app', {}).get('current_version', '1.0.0')
-        self.github_token = config.get('github', {}).get('token', None)
  
     def _get_api_url(self, repo: str) -> Optional[str]:
         if not repo: return None
         return f"https://api.github.com/repos/{repo}/releases/latest"
 
     def _get_headers(self) -> Dict:
-        headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Overcontrol'}
-        token = self.config.get('github', {}).get('token', None)
-        if token:
-            headers['Authorization'] = f'token {token}'
-        return headers
+        return {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Overcontrol'}
     
     def _check_updates_generic(self, repo: str, current_version: str, asset_extension: str = '.bin') -> Dict:
         api_url = self._get_api_url(repo)
@@ -689,18 +791,12 @@ class FirmwareUpdateService:
         try:
             req_headers = self._get_headers()
             response = requests.get(api_url, headers=req_headers, timeout=10)
-            if response.status_code == 401:
-                if 'Authorization' in req_headers or self.config.get('github', {}).get('token'):
-                    if 'github' in self.config:
-                        self.config['github']['token'] = None
-                    self.github_token = None
-                    response = requests.get(api_url, headers=self._get_headers(), timeout=10)
             if response.status_code == 404:
                 return {'error': 'Repository not found or no releases available'}
             if response.status_code == 403:
-                return {'error': 'GitHub API Rate Limit Exceeded'}
+                return {'error': 'API Rate Limit Exceeded'}
             if response.status_code != 200:
-                return {'error': f'GitHub API returned status {response.status_code}'}
+                return {'error': f'API returned status {response.status_code}'}
             
             release_data = response.json()
             latest_version_str = release_data.get('tag_name', '0.0.0').lstrip('v')
@@ -751,12 +847,6 @@ class FirmwareUpdateService:
             save_path.parent.mkdir(parents=True, exist_ok=True)
             req_headers = self._get_headers()
             response = requests.get(download_url, headers=req_headers, stream=True, timeout=30)
-            if response.status_code == 401:
-                if 'Authorization' in req_headers or self.config.get('github', {}).get('token'):
-                    if 'github' in self.config:
-                        self.config['github']['token'] = None
-                    self.github_token = None
-                    response = requests.get(download_url, headers=self._get_headers(), stream=True, timeout=30)
             response.raise_for_status()
             
             with open(save_path, 'wb') as f:
@@ -822,18 +912,9 @@ class UpdateManager:
             current_version = APP_VERSION
             api_url = f"https://api.github.com/repos/{repo}/releases/latest"
             headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Overcontrol'}
-            token = self.config.get('github', {}).get('token')
-            if token:
-                headers['Authorization'] = f'token {token}'
             resp = requests.get(api_url, headers=headers, timeout=10)
-            if resp.status_code == 401:
-                if 'Authorization' in headers or self.config.get('github', {}).get('token'):
-                    if 'github' in self.config:
-                        self.config['github']['token'] = None
-                    headers.pop('Authorization', None)
-                    resp = requests.get(api_url, headers=headers, timeout=10)
             if resp.status_code != 200:
-                 return {'status': 'error', 'message': f'GitHub API error: {resp.status_code}'}
+                 return {'status': 'error', 'message': f'API error: {resp.status_code}'}
             data = resp.json()
             latest_version_str = data.get('tag_name', '0.0.0').lstrip('v')
             try:
@@ -891,9 +972,6 @@ class UpdateManager:
             calculated_hash = sha256_hash.hexdigest().lower()
             
             headers = {'User-Agent': 'Overcontrol'}
-            token = self.config.get('github', {}).get('token')
-            if token:
-                headers['Authorization'] = f'token {token}'
             hash_found = False
             expected_hash = None
             
@@ -1221,8 +1299,6 @@ class Api:
         self._knob_controller.set_speed(1)
         if self._serial_service.is_connected:
             self._serial_service.send_raw_command("SET_KNOB_MODE Standard")
-        if self._window:
-            self._ui_bridge.evaluate_js_safe("window.location.reload()")
         return {"status": "success"}
 
     # --- SerialMixin Endpoints ---
@@ -1403,8 +1479,10 @@ class Api:
         return {"status": "success", "macros": macros}
     
     @safe_api
-    def install_community_macro(self, macro_data: Dict):
+    def install_community_macro(self, macro_data: Dict, increment_download: bool = True):
         install_type = macro_data.get('type', 'macro')
+        macro_id = macro_data.get('id')
+        
         if install_type == 'profile':
             profile_content = macro_data.get('profile', {})
             if not profile_content:
@@ -1420,7 +1498,9 @@ class Api:
             self._profiles["active_profile"] = profile_name 
             self._current_profile_name = profile_name
             self._profile_service.save_profiles(self._profiles)
-            self._profile_switcher.notify_manual_switch(profile_name) 
+            self._profile_switcher.notify_manual_switch(profile_name)
+            if macro_id and increment_download:
+                threading.Thread(target=self._community_library_service.increment_download, args=(macro_id,), daemon=True).start()
             return {"status": "success", "name": profile_name, "type": "profile"}
         else:
             macro_content = macro_data.get('macro', macro_data)
@@ -1437,11 +1517,41 @@ class Api:
             profile_data['macros'][macro_name] = macro_content
             self._profiles["profiles"][self._current_profile_name] = profile_data
             self._profile_service.save_profiles(self._profiles)
+            if macro_id and increment_download:
+                threading.Thread(target=self._community_library_service.increment_download, args=(macro_id,), daemon=True).start()
             return {"status": "success", "name": macro_name, "type": "macro"}
 
     @safe_api
     def submit_community_macro(self, macro_data: Dict):
         return self._community_library_service.upload_macro(macro_data)
+
+    @safe_api
+    def like_community_macro(self, macro_id: str):
+        return self._community_library_service.increment_like(macro_id)
+
+    @safe_api
+    def unlike_community_macro(self, macro_id: str):
+        return self._community_library_service.decrement_like(macro_id)
+
+    @safe_api
+    def get_starred_macros(self):
+        starred = self._config.get('starred_macros', [])
+        return {"status": "success", "starred": starred}
+
+    @safe_api
+    def toggle_star_macro_state(self, macro_id: str, starred: bool):
+        if not macro_id:
+            return {"status": "error", "message": "Missing macro ID"}
+        if 'starred_macros' not in self._config:
+            self._config['starred_macros'] = []
+        current_starred = set(self._config.get('starred_macros', []))
+        if starred:
+            current_starred.add(macro_id)
+        else:
+            current_starred.discard(macro_id)
+        self._config['starred_macros'] = sorted(list(current_starred))
+        self._save_config()
+        return {"status": "success", "starred": self._config['starred_macros']}
 
     # --- IconMixin Endpoints ---
     @safe_api
@@ -1497,12 +1607,192 @@ class Api:
     def search_icons(self, query):
         self._ensure_icon_cache()
         query = query.lower()
+        
+        synonym_map = {
+            "settings": ["options", "gear", "cog", "preferences", "setup", "config", "control", "tool"],
+            "options": ["settings", "preferences", "config", "menu"],
+            "gear": ["settings", "cog", "preferences", "setup", "config"],
+            "cog": ["settings", "gear", "preferences", "setup", "config"],
+            "delete": ["remove", "trash", "bin", "clear", "erase", "trashcan", "discard"],
+            "trash": ["delete", "remove", "bin", "clear", "erase", "trashcan", "discard"],
+            "bin": ["delete", "remove", "trash", "clear", "erase", "trashcan", "discard"],
+            "clear": ["delete", "remove", "trash", "erase", "clean", "reset"],
+            "edit": ["write", "pen", "pencil", "modify", "change", "compose", "draft"],
+            "pen": ["edit", "write", "pencil", "modify", "change"],
+            "pencil": ["edit", "write", "pen", "modify", "change"],
+            "add": ["plus", "create", "new", "insert", "more", "append"],
+            "plus": ["add", "create", "new", "insert", "more"],
+            "new": ["add", "create", "plus", "insert"],
+            "create": ["add", "new", "plus", "insert"],
+            "close": ["exit", "cancel", "remove", "xmark", "cross", "quit", "stop", "close-circle"],
+            "exit": ["close", "quit", "leave", "logout"],
+            "cancel": ["close", "exit", "remove", "xmark", "cross", "stop"],
+            "cross": ["close", "cancel", "xmark", "remove"],
+            "check": ["confirm", "ok", "success", "done", "tick", "approve", "yes", "valid", "checkbox"],
+            "confirm": ["check", "ok", "success", "done", "tick", "approve"],
+            "ok": ["check", "confirm", "success", "done", "tick", "approve", "yes"],
+            "success": ["check", "confirm", "ok", "done", "tick", "green"],
+            "done": ["check", "confirm", "ok", "success", "tick"],
+            "tick": ["check", "confirm", "ok", "success", "done"],
+            "search": ["find", "lookup", "magnify", "glass", "detect", "zoom", "query"],
+            "find": ["search", "lookup", "magnifying", "glass"],
+            "zoom": ["search", "find", "magnify", "scale", "size"],
+            "home": ["house", "start", "main", "homepage", "dashboard"],
+            "house": ["home", "start", "main"],
+            "user": ["profile", "member", "avatar", "person", "human", "account", "contact", "people"],
+            "profile": ["user", "member", "avatar", "person", "human", "account", "contact"],
+            "avatar": ["user", "profile", "member", "person", "human", "account"],
+            "member": ["user", "profile", "avatar", "person", "people"],
+            "person": ["user", "profile", "avatar", "member", "human"],
+            "people": ["users", "group", "team", "contacts", "crowd"],
+            "mail": ["email", "envelope", "letter", "message", "inbox", "send"],
+            "email": ["mail", "envelope", "letter", "message", "inbox", "send"],
+            "envelope": ["mail", "email", "letter", "message"],
+            "phone": ["call", "mobile", "telephone", "cellphone", "ring"],
+            "call": ["phone", "mobile", "telephone", "ring"],
+            "mobile": ["phone", "call", "telephone", "cellphone", "device"],
+            "camera": ["photo", "capture", "lens", "snap", "shot", "picture"],
+            "photo": ["camera", "capture", "lens", "snap", "picture", "image", "gallery"],
+            "picture": ["photo", "image", "gallery", "art", "paint"],
+            "image": ["photo", "picture", "gallery", "art", "paint"],
+            "video": ["movie", "film", "play", "record", "camcorder", "media", "youtube"],
+            "movie": ["video", "film", "play", "media"],
+            "film": ["video", "movie", "play", "media", "camera"],
+            "music": ["audio", "song", "sound", "melody", "tune", "track", "spotify", "playlist"],
+            "song": ["music", "audio", "sound", "melody", "tune", "track"],
+            "sound": ["music", "audio", "volume", "speaker", "noise"],
+            "audio": ["music", "sound", "volume", "speaker", "track"],
+            "volume": ["sound", "audio", "speaker", "loud", "level"],
+            "speaker": ["volume", "sound", "audio", "loud"],
+            "play": ["start", "run", "media", "music", "video", "go"],
+            "pause": ["hold", "wait", "media", "music", "video", "stop"],
+            "stop": ["halt", "end", "media", "music", "video", "block"],
+            "lock": ["secure", "private", "safe", "key", "password", "security", "padlock"],
+            "unlock": ["open", "public", "key", "password", "security", "unlocked"],
+            "secure": ["lock", "private", "safe", "security"],
+            "safe": ["lock", "secure", "private", "security", "shield"],
+            "shield": ["safe", "secure", "security", "protect", "guard"],
+            "key": ["lock", "unlock", "password", "security", "license"],
+            "password": ["lock", "unlock", "key", "security", "passcode"],
+            "cloud": ["weather", "sky", "storage", "backup", "download", "upload", "online"],
+            "backup": ["cloud", "storage", "save", "sync"],
+            "storage": ["cloud", "backup", "disk", "folder", "drive", "harddrive"],
+            "sun": ["weather", "day", "light", "sunny", "brightness", "warm", "summer"],
+            "sunny": ["sun", "weather", "day", "light"],
+            "light": ["sun", "sunny", "brightness", "day", "lamp", "bulb"],
+            "brightness": ["sun", "light", "screen"],
+            "moon": ["weather", "night", "dark", "sleep", "midnight", "crescent"],
+            "night": ["moon", "weather", "dark", "sleep"],
+            "dark": ["moon", "night", "sleep"],
+            "star": ["favorite", "bookmark", "rate", "like", "starry", "badge", "award"],
+            "favorite": ["star", "heart", "bookmark", "like", "love"],
+            "bookmark": ["star", "favorite", "tag", "label", "save"],
+            "heart": ["love", "like", "favorite", "health", "medical", "cardio"],
+            "love": ["heart", "like", "favorite"],
+            "like": ["heart", "love", "star", "favorite", "thumbsup", "thumbs-up"],
+            "map": ["location", "gps", "direction", "navigation", "address", "route", "compass"],
+            "location": ["map", "gps", "direction", "navigation", "pin", "marker"],
+            "gps": ["map", "location", "direction", "navigation"],
+            "navigation": ["map", "location", "gps", "direction", "compass", "steer", "route"],
+            "pin": ["marker", "location", "gps", "map", "anchor", "pushpin"],
+            "marker": ["pin", "location", "gps", "map"],
+            "info": ["about", "details", "help", "information", "hint"],
+            "about": ["info", "details", "information"],
+            "details": ["info", "about", "information"],
+            "help": ["question", "faq", "support", "info", "guide", "assist"],
+            "question": ["help", "faq", "support", "query", "ask"],
+            "faq": ["help", "question", "support"],
+            "support": ["help", "question", "faq", "assist"],
+            "alert": ["warning", "error", "danger", "caution", "exclamation", "notice", "bell"],
+            "warning": ["alert", "error", "danger", "caution", "exclamation", "notice"],
+            "error": ["alert", "warning", "danger", "caution", "fail", "failure", "wrong"],
+            "danger": ["alert", "warning", "error", "caution", "fail", "hazard"],
+            "caution": ["alert", "warning", "error", "danger", "notice", "hazard"],
+            "folder": ["directory", "storage", "file", "archive", "cabinet"],
+            "directory": ["folder", "storage", "file"],
+            "file": ["document", "paper", "page", "sheet", "text", "file-text"],
+            "document": ["file", "paper", "page", "sheet", "text"],
+            "paper": ["file", "document", "page", "sheet"],
+            "page": ["file", "document", "paper", "sheet"],
+            "sheet": ["file", "document", "paper", "page"],
+            "copy": ["duplicate", "clone", "copy-file", "files"],
+            "duplicate": ["copy", "clone"],
+            "clone": ["copy", "duplicate"],
+            "paste": ["clipboard", "insert", "output"],
+            "clipboard": ["paste", "insert", "board", "copy-paste"],
+            "cut": ["scissors", "crop", "divide"],
+            "scissors": ["cut", "crop"],
+            "undo": ["back", "reverse", "history", "previous", "arrow-left"],
+            "redo": ["forward", "advance", "next", "arrow-right"],
+            "save": ["disk", "floppy", "store", "download", "write"],
+            "disk": ["save", "floppy", "storage", "drive"],
+            "floppy": ["save", "disk", "storage"],
+            "replace": ["swap", "exchange", "refresh", "rotate"],
+            "swap": ["replace", "exchange", "switch"],
+            "tab": ["window", "sheet", "browser", "page"],
+            "window": ["tab", "browser", "screen", "display"],
+            "refresh": ["reload", "sync", "update", "restart", "refresh-arrow"],
+            "reload": ["refresh", "sync", "update"],
+            "sync": ["refresh", "reload", "update", "connect", "arrows"],
+            "update": ["refresh", "reload", "sync", "download"],
+            "minimize": ["subtract", "hide", "down", "minus", "collapse"],
+            "restore": ["maximize", "expand", "up", "reset"],
+            "maximize": ["restore", "expand", "up", "fullscreen"],
+            "expand": ["maximize", "restore", "fullscreen", "grow"],
+            "mute": ["silent", "quiet", "volume-mute", "speaker-mute"],
+            "silent": ["mute", "quiet"],
+            "next": ["forward", "skip", "arrow-right", "ahead"],
+            "previous": ["back", "prev", "arrow-left", "behind"],
+            "prev": ["previous", "back", "arrow-left"],
+            "skip": ["next", "forward"],
+            "link": ["chain", "connect", "hyperlink", "url", "anchor"],
+            "connect": ["link", "chain", "plug", "sync"],
+            "disconnect": ["unlink", "unplug", "broken"],
+            "lock-line": ["lock", "secure"],
+            "lock-fill": ["lock", "secure"],
+            "bell": ["alert", "alarm", "notify", "notification", "ring"],
+            "notification": ["bell", "alert", "alarm", "notify"],
+            "notify": ["bell", "alert", "alarm", "notification"],
+            "mail-send": ["mail", "email", "send", "paperplane", "paper-plane"],
+            "send": ["mail", "email", "paperplane", "paper-plane", "airplane", "fly"],
+            "paperplane": ["send", "mail", "fly"],
+            "airplane": ["send", "fly", "flight", "plane", "travel"],
+            "terminal": ["console", "command", "bash", "cmd", "prompt", "code", "cli"],
+            "console": ["terminal", "command", "bash", "cmd", "prompt", "code", "cli"],
+            "code": ["terminal", "console", "develop", "coding", "source", "programming"],
+            "develop": ["code", "coding", "source", "programming", "brackets", "build"],
+            "brackets": ["code", "develop", "coding", "brackets"],
+            "heart-fill": ["heart", "love", "like"],
+            "heart-line": ["heart", "love", "like"],
+            "star-fill": ["star", "favorite"],
+            "star-line": ["star", "favorite"],
+            "volume-up": ["volume", "loud", "sound"],
+            "volume-down": ["volume", "quiet", "sound"],
+            "volume-mute": ["mute", "silent", "quiet"]
+        }
+        
         matches = []
         for category, icons in self._icon_cache.items():
+            category_lower = category.lower()
             for icon_path in icons:
                 filename = icon_path.split('/')[-1].lower()
-                if query in filename:
+                base_name = re.sub(r'\.(svg|png|jpg|jpeg|gif)$', '', filename)
+                
+                # Split base name on delimiters
+                words = re.split(r'[-_]', base_name)
+                
+                # Gather match keywords
+                match_keys = {filename, base_name, category_lower}
+                for word in words:
+                    if word:
+                        match_keys.add(word)
+                        if word in synonym_map:
+                            match_keys.update(synonym_map[word])
+                            
+                # Check if query matches any tag as substring
+                if any(query in key for key in match_keys):
                     matches.append(icon_path)
+                    
         return {"status": "success", "data": sorted(matches)}
 
     # --- UpdateMixin Endpoints ---
@@ -1554,17 +1844,18 @@ class Api:
 
     @safe_api
     def flash_firmware(self, port, file_path):
+        if getattr(self, '_flasher', None) and self._flasher.is_flashing:
+            return {"status": "error", "message": "A flashing operation is already in progress."}
+
         if not port and self._serial_service.is_connected:
             port = self._serial_service.port
         if not port:
+            import serial.tools.list_ports
             ports = list(serial.tools.list_ports.comports())
             if ports:
                 port = ports[0].device
             else:
                  return {"status": "error", "message": "No device found. Connect via USB."}
-        if self._serial_service.is_connected:
-            self._serial_service.disconnect()
-            time.sleep(0.5)
 
         def on_progress(msg, pct):
             if self._window:
@@ -1584,8 +1875,22 @@ class Api:
                     logger.error(f"Error sending completion: {e}")
             
         self._flasher = FlasherService(on_progress, on_finished)
-        success, info = self._flasher.flash(port, file_path)
-        return {"status": "success" if success else "error", "message": info}
+        
+        def run_flash_async():
+            try:
+                if self._serial_service.is_connected:
+                    self._serial_service.disconnect()
+                    time.sleep(0.5)
+                success, info = self._flasher.flash(port, file_path)
+                logger.info(f"Background flashing complete. Status: {success}, Info: {info}")
+            except Exception as e:
+                logger.error(f"Error in background flashing thread: {e}")
+                on_finished(False, f"Internal flashing thread error: {str(e)}")
+
+        flashing_thread = threading.Thread(target=run_flash_async, name="FlasherThread", daemon=True)
+        flashing_thread.start()
+        
+        return {"status": "success", "message": "Flashing started in background"}
 
     # --- MacroMixin Endpoints ---
     @safe_api

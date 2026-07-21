@@ -473,7 +473,15 @@ function showPage(pageId) {
         'community': 'Macro Hub'
     };
     const titleEl = document.getElementById('page-title');
-    if (titleEl) titleEl.innerText = titles[pageId] || 'OVERCONTROL';
+    if (titleEl) {
+        const titleText = titles[pageId] || 'OVERCONTROL';
+        titleEl.innerText = titleText;
+        if (titleText === 'OVERCONTROL') {
+            titleEl.classList.add('logo-title');
+        } else {
+            titleEl.classList.remove('logo-title');
+        }
+    }
 
     // Load community macros when navigating to that page
     if (pageId === 'community') {
@@ -1422,6 +1430,8 @@ function renderSpecificMacroList(legacyId, userId) {
                 iconHtml = '<i class="fa-solid fa-rocket"></i>';
             } else if (macroData && macroData.type === 'command') {
                 iconHtml = '<i class="fa-solid fa-terminal"></i>';
+            } else if (macroData && macroData.type === 'text') {
+                iconHtml = '<i class="fa-solid fa-align-left"></i>';
             }
 
             // Item content wrapper for alignment
@@ -1546,7 +1556,7 @@ async function connectSerial(silent = false) {
     
     if (monolithPort) {
         portToConnect = monolithPort[0];
-        if (!silent) console.log("Targeting device on", portToConnect);
+        // if (!silent) console.log("Targeting device on", portToConnect);
     }
 
     const result = await pywebview.api.connect_serial(portToConnect);
@@ -1773,6 +1783,7 @@ function openMacroEditor(macroName = null) {
     const nameInput = document.getElementById('macro-name-input');
     const launchInput = document.getElementById('launch-path-input');
     const commandInput = document.getElementById('command-input'); // New
+    const textInput = document.getElementById('text-macro-input');
 
     editingMacroName = macroName; // Set tracking var
 
@@ -1781,6 +1792,10 @@ function openMacroEditor(macroName = null) {
     recordedKeys = [];
     launchInput.value = "";
     commandInput.value = ""; // New
+    if (textInput) textInput.value = "";
+    const defaultRadio = document.querySelector('input[name="text-method"][value="paste"]');
+    if (defaultRadio) defaultRadio.checked = true;
+
     updateRecorderDisplay();
     updateRecordButton();
 
@@ -1812,6 +1827,13 @@ function openMacroEditor(macroName = null) {
                 // Switch to command tab
                 document.querySelector('.modal-tab[data-tab="command"]').click();
                 commandInput.value = macroData.command || "";
+            } else if (macroData.type === "text") {
+                // Switch to text tab
+                document.querySelector('.modal-tab[data-tab="text"]').click();
+                if (textInput) textInput.value = macroData.text || "";
+                const method = macroData.method || "paste";
+                const methodRadio = document.querySelector(`input[name="text-method"][value="${method}"]`);
+                if (methodRadio) methodRadio.checked = true;
             } else {
                 // Assume keystrokes (explicit object) legacy
                 if (macroData.sequence) {
@@ -1912,17 +1934,200 @@ async function loadAllIcons() {
     }
 }
 
+// Pre-defined synonyms for semantic search mapping
+const SYNONYM_MAP = {
+    "settings": ["options", "gear", "cog", "preferences", "setup", "config", "control", "tool"],
+    "options": ["settings", "preferences", "config", "menu"],
+    "gear": ["settings", "cog", "preferences", "setup", "config"],
+    "cog": ["settings", "gear", "preferences", "setup", "config"],
+    "delete": ["remove", "trash", "bin", "clear", "erase", "trashcan", "discard"],
+    "trash": ["delete", "remove", "bin", "clear", "erase", "trashcan", "discard"],
+    "bin": ["delete", "remove", "trash", "clear", "erase", "trashcan", "discard"],
+    "clear": ["delete", "remove", "trash", "erase", "clean", "reset"],
+    "edit": ["write", "pen", "pencil", "modify", "change", "compose", "draft"],
+    "pen": ["edit", "write", "pencil", "modify", "change"],
+    "pencil": ["edit", "write", "pen", "modify", "change"],
+    "add": ["plus", "create", "new", "insert", "more", "append"],
+    "plus": ["add", "create", "new", "insert", "more"],
+    "new": ["add", "create", "plus", "insert"],
+    "create": ["add", "new", "plus", "insert"],
+    "close": ["exit", "cancel", "remove", "xmark", "cross", "quit", "stop", "close-circle"],
+    "exit": ["close", "quit", "leave", "logout"],
+    "cancel": ["close", "exit", "remove", "xmark", "cross", "stop"],
+    "cross": ["close", "cancel", "xmark", "remove"],
+    "check": ["confirm", "ok", "success", "done", "tick", "approve", "yes", "valid", "checkbox"],
+    "confirm": ["check", "ok", "success", "done", "tick", "approve"],
+    "ok": ["check", "confirm", "success", "done", "tick", "approve", "yes"],
+    "success": ["check", "confirm", "ok", "done", "tick", "green"],
+    "done": ["check", "confirm", "ok", "success", "tick"],
+    "tick": ["check", "confirm", "ok", "success", "done"],
+    "search": ["find", "lookup", "magnify", "glass", "detect", "zoom", "query"],
+    "find": ["search", "lookup", "magnifying", "glass"],
+    "zoom": ["search", "find", "magnify", "scale", "size"],
+    "home": ["house", "start", "main", "homepage", "dashboard"],
+    "house": ["home", "start", "main"],
+    "user": ["profile", "member", "avatar", "person", "human", "account", "contact", "people"],
+    "profile": ["user", "member", "avatar", "person", "human", "account", "contact"],
+    "avatar": ["user", "profile", "member", "person", "human", "account"],
+    "member": ["user", "profile", "avatar", "person", "people"],
+    "person": ["user", "profile", "avatar", "member", "human"],
+    "people": ["users", "group", "team", "contacts", "crowd"],
+    "mail": ["email", "envelope", "letter", "message", "inbox", "send"],
+    "email": ["mail", "envelope", "letter", "message", "inbox", "send"],
+    "envelope": ["mail", "email", "letter", "message"],
+    "phone": ["call", "mobile", "telephone", "cellphone", "ring"],
+    "call": ["phone", "mobile", "telephone", "ring"],
+    "mobile": ["phone", "call", "telephone", "cellphone", "device"],
+    "camera": ["photo", "capture", "lens", "snap", "shot", "picture"],
+    "photo": ["camera", "capture", "lens", "snap", "picture", "image", "gallery"],
+    "picture": ["photo", "image", "gallery", "art", "paint"],
+    "image": ["photo", "picture", "gallery", "art", "paint"],
+    "video": ["movie", "film", "play", "record", "camcorder", "media", "youtube"],
+    "movie": ["video", "film", "play", "media"],
+    "film": ["video", "movie", "play", "media", "camera"],
+    "music": ["audio", "song", "sound", "melody", "tune", "track", "spotify", "playlist"],
+    "song": ["music", "audio", "sound", "melody", "tune", "track"],
+    "sound": ["music", "audio", "volume", "speaker", "noise"],
+    "audio": ["music", "sound", "volume", "speaker", "track"],
+    "volume": ["sound", "audio", "speaker", "loud", "level"],
+    "speaker": ["volume", "sound", "audio", "loud"],
+    "play": ["start", "run", "media", "music", "video", "go"],
+    "pause": ["hold", "wait", "media", "music", "video", "stop"],
+    "stop": ["halt", "end", "media", "music", "video", "block"],
+    "lock": ["secure", "private", "safe", "key", "password", "security", "padlock"],
+    "unlock": ["open", "public", "key", "password", "security", "unlocked"],
+    "secure": ["lock", "private", "safe", "security"],
+    "safe": ["lock", "secure", "private", "security", "shield"],
+    "shield": ["safe", "secure", "security", "protect", "guard"],
+    "key": ["lock", "unlock", "password", "security", "license"],
+    "password": ["lock", "unlock", "key", "security", "passcode"],
+    "cloud": ["weather", "sky", "storage", "backup", "download", "upload", "online"],
+    "backup": ["cloud", "storage", "save", "sync"],
+    "storage": ["cloud", "backup", "disk", "folder", "drive", "harddrive"],
+    "sun": ["weather", "day", "light", "sunny", "brightness", "warm", "summer"],
+    "sunny": ["sun", "weather", "day", "light"],
+    "light": ["sun", "sunny", "brightness", "day", "lamp", "bulb"],
+    "brightness": ["sun", "light", "screen"],
+    "moon": ["weather", "night", "dark", "sleep", "midnight", "crescent"],
+    "night": ["moon", "weather", "dark", "sleep"],
+    "dark": ["moon", "night", "sleep"],
+    "star": ["favorite", "bookmark", "rate", "like", "starry", "badge", "award"],
+    "favorite": ["star", "heart", "bookmark", "like", "love"],
+    "bookmark": ["star", "favorite", "tag", "label", "save"],
+    "heart": ["love", "like", "favorite", "health", "medical", "cardio"],
+    "love": ["heart", "like", "favorite"],
+    "like": ["heart", "love", "star", "favorite", "thumbsup", "thumbs-up"],
+    "map": ["location", "gps", "direction", "navigation", "address", "route", "compass"],
+    "location": ["map", "gps", "direction", "navigation", "pin", "marker"],
+    "gps": ["map", "location", "direction", "navigation"],
+    "navigation": ["map", "location", "gps", "direction", "compass", "steer", "route"],
+    "pin": ["marker", "location", "gps", "map", "anchor", "pushpin"],
+    "marker": ["pin", "location", "gps", "map"],
+    "info": ["about", "details", "help", "information", "hint"],
+    "about": ["info", "details", "information"],
+    "details": ["info", "about", "information"],
+    "help": ["question", "faq", "support", "info", "guide", "assist"],
+    "question": ["help", "faq", "support", "query", "ask"],
+    "faq": ["help", "question", "support"],
+    "support": ["help", "question", "faq", "assist"],
+    "alert": ["warning", "error", "danger", "caution", "exclamation", "notice", "bell"],
+    "warning": ["alert", "error", "danger", "caution", "exclamation", "notice"],
+    "error": ["alert", "warning", "danger", "caution", "fail", "failure", "wrong"],
+    "danger": ["alert", "warning", "error", "caution", "fail", "hazard"],
+    "caution": ["alert", "warning", "error", "danger", "notice", "hazard"],
+    "folder": ["directory", "storage", "file", "archive", "cabinet"],
+    "directory": ["folder", "storage", "file"],
+    "file": ["document", "paper", "page", "sheet", "text", "file-text"],
+    "document": ["file", "paper", "page", "sheet", "text"],
+    "paper": ["file", "document", "page", "sheet"],
+    "page": ["file", "document", "paper", "sheet"],
+    "sheet": ["file", "document", "paper", "page"],
+    "copy": ["duplicate", "clone", "copy-file", "files"],
+    "duplicate": ["copy", "clone"],
+    "clone": ["copy", "duplicate"],
+    "paste": ["clipboard", "insert", "output"],
+    "clipboard": ["paste", "insert", "board", "copy-paste"],
+    "cut": ["scissors", "crop", "divide"],
+    "scissors": ["cut", "crop"],
+    "undo": ["back", "reverse", "history", "previous", "arrow-left"],
+    "redo": ["forward", "advance", "next", "arrow-right"],
+    "save": ["disk", "floppy", "store", "download", "write"],
+    "disk": ["save", "floppy", "storage", "drive"],
+    "floppy": ["save", "disk", "storage"],
+    "replace": ["swap", "exchange", "refresh", "rotate"],
+    "swap": ["replace", "exchange", "switch"],
+    "tab": ["window", "sheet", "browser", "page"],
+    "window": ["tab", "browser", "screen", "display"],
+    "refresh": ["reload", "sync", "update", "restart", "refresh-arrow"],
+    "reload": ["refresh", "sync", "update"],
+    "sync": ["refresh", "reload", "update", "connect", "arrows"],
+    "update": ["refresh", "reload", "sync", "download"],
+    "minimize": ["subtract", "hide", "down", "minus", "collapse"],
+    "restore": ["maximize", "expand", "up", "reset"],
+    "maximize": ["restore", "expand", "up", "fullscreen"],
+    "expand": ["maximize", "restore", "fullscreen", "grow"],
+    "mute": ["silent", "quiet", "volume-mute", "speaker-mute"],
+    "silent": ["mute", "quiet"],
+    "next": ["forward", "skip", "arrow-right", "ahead"],
+    "previous": ["back", "prev", "arrow-left", "behind"],
+    "prev": ["previous", "back", "arrow-left"],
+    "skip": ["next", "forward"],
+    "link": ["chain", "connect", "hyperlink", "url", "anchor"],
+    "connect": ["link", "chain", "plug", "sync"],
+    "disconnect": ["unlink", "unplug", "broken"],
+    "lock-line": ["lock", "secure"],
+    "lock-fill": ["lock", "secure"],
+    "bell": ["alert", "alarm", "notify", "notification", "ring"],
+    "notification": ["bell", "alert", "alarm", "notify"],
+    "notify": ["bell", "alert", "alarm", "notification"],
+    "mail-send": ["mail", "email", "send", "paperplane", "paper-plane"],
+    "send": ["mail", "email", "paperplane", "paper-plane", "airplane", "fly"],
+    "paperplane": ["send", "mail", "fly"],
+    "airplane": ["send", "fly", "flight", "plane", "travel"],
+    "terminal": ["console", "command", "bash", "cmd", "prompt", "code", "cli"],
+    "console": ["terminal", "command", "bash", "cmd", "prompt", "code", "cli"],
+    "code": ["terminal", "console", "develop", "coding", "source", "programming"],
+    "develop": ["code", "coding", "source", "programming", "brackets", "build"],
+    "brackets": ["code", "develop", "coding", "brackets"],
+    "heart-fill": ["heart", "love", "like"],
+    "heart-line": ["heart", "love", "like"],
+    "star-fill": ["star", "favorite"],
+    "star-line": ["star", "favorite"],
+    "volume-up": ["volume", "loud", "sound"],
+    "volume-down": ["volume", "quiet", "sound"],
+    "volume-mute": ["mute", "silent", "quiet"]
+};
+
 // Simple synchronous build (fast enough for ~3000 icons)
 function buildSearchCacheSync(data) {
     if (cachedIconFlatList) return;
 
     // console.time("BuildCache");
     cachedIconFlatList = [];
-    Object.values(data).forEach(icons => {
+    Object.entries(data).forEach(([category, icons]) => {
+        const categoryLower = category.toLowerCase();
         icons.forEach(path => {
+            const filename = path.split('/').pop().toLowerCase();
+            const baseName = filename.replace(/\.(svg|png|jpg|jpeg|gif)$/i, '');
+            const words = baseName.split(/[-_]/).filter(w => w.length > 0);
+            
+            const keywordsSet = new Set();
+            keywordsSet.add(filename);
+            keywordsSet.add(baseName);
+            keywordsSet.add(categoryLower);
+            
+            words.forEach(word => {
+                keywordsSet.add(word);
+                const synonyms = SYNONYM_MAP[word];
+                if (synonyms) {
+                    synonyms.forEach(syn => keywordsSet.add(syn));
+                }
+            });
+            
             cachedIconFlatList.push({
                 path: path,
-                searchName: path.split('/').pop().toLowerCase()
+                searchName: filename,
+                keywords: Array.from(keywordsSet)
             });
         });
     });
@@ -2019,9 +2224,12 @@ if (iconSearchInput) {
             if (cachedIconFlatList) {
                 const queryLower = query.toLowerCase();
 
-                // Fast filter on pre-processed list
+                // Fast filter on pre-processed list with keyword/synonym matching
                 const matches = cachedIconFlatList
-                    .filter(item => item.searchName.includes(queryLower))
+                    .filter(item => {
+                        return item.searchName.includes(queryLower) || 
+                               item.keywords.some(keyword => keyword.includes(queryLower));
+                    })
                     .map(item => item.path); // Extract path only
 
                 // Render Results
@@ -2032,8 +2240,8 @@ if (iconSearchInput) {
             // Fallback to Backend if cache missing (should rarely happen if browser opened)
             try {
                 const res = await pywebview.api.search_icons(query);
-                if (res.status === 'success') {
-                    renderSearchResults(res.icons, query);
+                if (res.status === 'success' && res.data) {
+                    renderSearchResults(res.data, query);
                 }
             } catch (e) {
                 console.error("Error searching icons:", e);
@@ -2353,6 +2561,16 @@ btnSaveMacro.addEventListener('click', async () => {
         }
         macroData.type = "command";
         macroData.command = cmd;
+    } else if (activeTab === "text") {
+        const textVal = document.getElementById('text-macro-input').value;
+        if (!textVal) {
+            await showAlert("", "Please enter text / paragraph", "danger");
+            return;
+        }
+        const method = document.querySelector('input[name="text-method"]:checked').value;
+        macroData.type = "text";
+        macroData.text = textVal;
+        macroData.method = method;
     } else {
         // Keystrokes
         if (recordedKeys.length === 0) {

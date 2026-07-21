@@ -28,8 +28,9 @@
     },
     "github": {
         "firmware_repo": "",
-        "app_repo": "",
-        "community_repo": "Juxtupool/APP-TEST",
-        "token": ""
+        "app_repo": ""
+    },
+    "pocketbase": {
+        "url": "https://solitary-cake-d872.pulakataranga.workers.dev/"
     }
 }

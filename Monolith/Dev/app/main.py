@@ -21,6 +21,7 @@ from .api import Api, get_ui_bridge
 
 logger = logging.getLogger(__name__)
 _app_mutex = None
+_app_hwnd = None
 
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller."""
@@ -36,8 +37,35 @@ def single_instance_check(title: str = "Overcontrol"):
     _app_mutex = win32event.CreateMutex(None, False, "Global\\OvercontrolMutex")
     if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
         logger.warning("Another instance of the application is already running.")
-        hwnd = win32gui.FindWindow(None, title)
-        if hwnd:
+        
+        # Try to signal the existing instance to restore/show itself
+        try:
+            hevent = win32event.OpenEvent(win32event.EVENT_MODIFY_STATE, False, "Global\\OvercontrolShowEvent")
+            if hevent:
+                win32event.SetEvent(hevent)
+                win32api.CloseHandle(hevent)
+                logger.info("Signaled existing instance via show event.")
+        except Exception as e:
+            logger.debug(f"Could not signal existing instance via event: {e}")
+
+        # Fallback/Direct Win32 Window Restoration
+        hwnd = 0
+        import tempfile
+        hwnd_path = os.path.join(tempfile.gettempdir(), 'overcontrol_hwnd.txt')
+        if os.path.exists(hwnd_path):
+            try:
+                with open(hwnd_path, 'r') as f:
+                    hwnd = int(f.read().strip())
+            except Exception:
+                pass
+                
+        if not hwnd or not win32gui.IsWindow(hwnd):
+            hwnd = win32gui.FindWindow(None, title)
+            if not hwnd:
+                # Try finding any window with empty title if title was cleared
+                hwnd = win32gui.FindWindow(None, "")
+                
+        if hwnd and win32gui.IsWindow(hwnd):
             if win32gui.IsIconic(hwnd):
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             else:
@@ -50,7 +78,10 @@ def restore_window(window, title: str = "Overcontrol"):
     window.restore()
     window.show()
     try:
-        hwnd = win32gui.FindWindow(None, title)
+        global _app_hwnd
+        hwnd = _app_hwnd
+        if not hwnd or not win32gui.IsWindow(hwnd):
+            hwnd = win32gui.FindWindow(None, title)
         if hwnd:
             win32gui.SetWindowPos(
                 hwnd, 0, 0, 0, 0, 0,
@@ -72,6 +103,18 @@ def startup_style_application(title: str, start_minimized: bool, get_resource_pa
     if not hwnd:
         logger.error("Could not find window HWND for style initialization")
         return
+
+    global _app_hwnd
+    _app_hwnd = hwnd
+
+    # Write HWND to temp file so subsequent instances can find us instantly
+    import tempfile
+    try:
+        hwnd_path = os.path.join(tempfile.gettempdir(), 'overcontrol_hwnd.txt')
+        with open(hwnd_path, 'w') as f:
+            f.write(str(hwnd))
+    except Exception as e:
+        logger.error(f"Could not write HWND to temp file: {e}")
 
     try:
         win32gui.SetWindowText(hwnd, "")
@@ -113,7 +156,7 @@ def startup_style_application(title: str, start_minimized: bool, get_resource_pa
             win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
             win32gui.SetWindowPos(hwnd, 0, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOZORDER | win32con.SWP_FRAMECHANGED)
         else:
-            win32gui.SetWindowPos(hwnd, 0, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOZORDER | win32con.SWP_FRAMECHANGED | win32con.SWP_SHOWWINDOW)
+            win32gui.SetWindowPos(hwnd, 0, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOZORDER | win32con.SWP_FRAMECHANGED)
             
         logger.info("Startup window styles applied successfully")
     except Exception as e:
@@ -125,6 +168,7 @@ class TrayManager:
         self.window = window
         self.tray_icon = None
         self.last_click_time = 0
+        self.shutting_down = False
         
     def create_icon_image(self, connected=False):
         icon_path = get_resource_path("Icon/Logo.png")
@@ -254,7 +298,10 @@ class TrayManager:
         items.append(pystray.MenuItem("Quit", lambda icon, item: self.shutdown_application(icon)))
         return pystray.Menu(*items)
 
-    def shutdown_application(self, icon=None):
+    def shutdown_application(self, icon=None, from_close_event=False):
+        if self.shutting_down:
+            return
+        self.shutting_down = True
         try:
             logger.info("Shutting down application...")
             self.api.tray_loop_running = False
@@ -278,7 +325,7 @@ class TrayManager:
                 except Exception:
                     pass
                 
-            if self.window:
+            if self.window and not from_close_event:
                 self.window.destroy()
                 
             time.sleep(0.2)
@@ -304,11 +351,11 @@ class TrayManager:
                         last_port = self.api._serial_service._last_connected_port
                         autoconnect_port = None
                         
-                        if last_port and last_port in new_ports:
+                        if last_port and last_port in current_ports:
                             autoconnect_port = last_port
-                            logger.info(f"Tray Monitor: Last active port {last_port} reconnected. Attempting auto-connect.")
+                            logger.info(f"Tray Monitor: Active port {last_port} available. Attempting auto-reconnect.")
                         else:
-                            monolith = next((p for p in ports if p[0] in new_ports and any(s in (p[1] + str(p[2] if len(p) > 2 else '')).lower() for s in ['monolith', '2e8a:0002', '2e8a:0003', '1209:c550'])), None)
+                            monolith = next((p for p in ports if p[0] in new_ports and any(s in (p[1] + str(p[2] if len(p) > 2 else '')).lower() for s in ['monolith', '2e8a:0002', '2e8a:0003', '1209:c550', '239a:cafe', '239a'])), None)
                             if monolith:
                                 autoconnect_port = monolith[0]
                                 logger.info(f"Tray Monitor: Found NEW device on {monolith[0]}, attempting auto-connect")
@@ -325,10 +372,50 @@ class TrayManager:
                 logger.error(f"Error in tray loop: {e}")
             time.sleep(2)
 
+def setup_power_event_listener(api):
+    def wnd_proc(hwnd, msg, wparam, lparam):
+        if msg == win32con.WM_POWERBROADCAST:
+            if wparam == 0x0004: # PBT_APMSUSPEND
+                logger.info("System Power Broadcast: Sleep event (PBT_APMSUSPEND) - closing serial port handle")
+                last_port = api._serial_service.port or api._serial_service._last_connected_port
+                api._serial_service.disconnect()
+                if last_port:
+                    api._serial_service._last_connected_port = last_port
+            elif wparam in (0x0012, 0x0007): # PBT_APMRESUMEAUTOMATIC, PBT_APMRESUMESUSPEND
+                logger.info("System Power Broadcast: Wake event (PBT_APMRESUME) - auto-reconnecting serial")
+                def delayed_reconnect():
+                    time.sleep(1.2)
+                    last_port = api._serial_service._last_connected_port
+                    if last_port:
+                        logger.info(f"Power event resume: Reconnecting serial to {last_port}")
+                        api.connect_serial(last_port)
+                threading.Thread(target=delayed_reconnect, daemon=True).start()
+        return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+
+    def listener_loop():
+        try:
+            wc = win32gui.WNDCLASS()
+            wc.hInstance = win32api.GetModuleHandle(None)
+            wc.lpszClassName = "OvercontrolPowerListenerClass"
+            wc.lpfnWndProc = wnd_proc
+            class_atom = win32gui.RegisterClass(wc)
+            hwnd = win32gui.CreateWindow(
+                class_atom, "OvercontrolPowerListener",
+                0, 0, 0, 0, 0, 0, 0, wc.hInstance, None
+            )
+            logger.info(f"Registered Windows Power Broadcast Listener (HWND: {hwnd})")
+            win32gui.PumpMessages()
+        except Exception as e:
+            logger.error(f"Error in Windows Power Broadcast Listener: {e}")
+
+    t = threading.Thread(target=listener_loop, daemon=True)
+    t.start()
+
 def main():
     single_instance_check("Overcontrol")
     
     api = Api()
+    setup_power_event_listener(api)
     assets_dir = get_resource_path("app/assets")
     index_path = assets_dir / "index.html"
     
@@ -348,10 +435,34 @@ def main():
         min_size=(1280, 800),
         background_color='#1a1a1a',
         frameless=False,
-        hidden=start_minimized,
+        hidden=True,
         easy_drag=False
     )
     api.set_window(window)
+
+    # Create named event for signaling from subsequent instances to show window
+    show_event = win32event.CreateEvent(None, False, False, "Global\\OvercontrolShowEvent")
+    
+    def listen_for_show_event():
+        while True:
+            try:
+                # 1 second timeout so loop yields and check is non-blocking
+                result = win32event.WaitForSingleObject(show_event, 1000)
+                if result == win32event.WAIT_OBJECT_0:
+                    logger.info("Received show window signal from second instance.")
+                    restore_window(window)
+            except Exception as e:
+                logger.error(f"Error in show event listener thread: {e}")
+                time.sleep(1)
+
+    show_thread = threading.Thread(target=listen_for_show_event)
+    show_thread.daemon = True
+    show_thread.start()
+
+    def on_loaded():
+        if not start_minimized:
+            window.show()
+    window.events.loaded += on_loaded
 
     tray_manager = TrayManager(api, window)
     api.set_tray_update_callback(tray_manager.refresh)
@@ -370,7 +481,16 @@ def main():
                 api._macro_recording_service.stop_recording(is_emergency=True)
             window.hide()
             return False 
-        tray_manager.shutdown_application()
+        
+        # Hide window instantly so it disappears from the screen immediately
+        window.hide()
+        
+        # Run cleanup and exit on a background thread to prevent UI thread lag
+        threading.Thread(
+            target=tray_manager.shutdown_application,
+            args=(None, True),
+            daemon=True
+        ).start()
         return True 
 
     def on_minimized():

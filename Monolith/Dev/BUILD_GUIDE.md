@@ -35,15 +35,9 @@ This document provides complete instructions for setting up the development envi
 
 4. **Configure Environment Variables**
    
-   Copy `.env.example` to `.env` and add your GitHub token:
+   Copy `.env.example` to `.env` if custom environment settings are needed:
    ```powershell
    Copy-Item .env.example .env
-   notepad .env
-   ```
-   
-   Edit `.env` and add:
-   ```
-   GITHUB_TOKEN=your_github_token_here
    ```
 
 5. **Run Application**
@@ -98,21 +92,10 @@ The build script auto-generates:
 
 ### How It Works
 
-The application uses a custom WebView2 bootstrapper located at:
-`app/utils/webview2_bootstrapper.py`
-
-**Features:**
-- Automatically detects if WebView2 is installed
-- Downloads official Microsoft WebView2 Runtime if needed
-- Supports silent (automatic) and interactive installation
-- Only requires ~5MB bootstrapper download
-
-**User Experience:**
-1. User runs `MacroPad Pro.exe`
-2. App checks for WebView2 Runtime
-3. If not found, downloads installer (~120MB)
-4. Installs WebView2 silently (one-time only)
-5. App launches normally
+WebView2 installation is handled automatically by the **Inno Setup Installer** during installation:
+- Automatically detects if WebView2 is installed.
+- Downloads the official Microsoft WebView2 Evergreen Bootstrapper if needed.
+- Installs WebView2 silently before launching the app.
 
 ---
 
@@ -142,10 +125,12 @@ For professional deployment, create a proper installer using Inno Setup.
 V4_Webview_NodeMCU - Main/
 ├── app/
 │   ├── assets/              # HTML, CSS, JS, icons
-│   ├── services/            # Backend services
-│   ├── utils/               # Utilities including webview2_bootstrapper.py
-│   ├── api.py               # Main API interface
-│   └── main.py              # Application entry point
+│   ├── tests/               # Unit tests for services
+│   ├── api.py               # Consolidated backend services & API exposure
+│   ├── macro_manager.py     # Keyboard/mouse macro execution & recording
+│   ├── main.py              # Application entry point & tray manager
+│   ├── serial_manager.py    # Serial communication & hardware flashing
+│   └── version.py           # App version definitions
 │
 ├── scripts/
 │   ├── build_exe.py         # Build automation
@@ -176,12 +161,6 @@ Application settings:
 
 **Important:** Never commit `config.json` with sensitive data!
 
-### .env File
-
-Environment variables for sensitive data:
-```
-GITHUB_TOKEN=your_token_here
-```
 
 ---
 
@@ -191,11 +170,6 @@ GITHUB_TOKEN=your_token_here
    - Use `.env` for sensitive data
    - `.gitignore` excludes `.env` automatically
    - Use `config.template.json` for examples
-
-2. **Token Management**
-   - Store GitHub token in `.env`
-   - App reads from environment via `config.py`
-   - Token not stored in version control
 
 3. **Code Signing** (Recommended for distribution)
    - Sign executable with code signing certificate
@@ -212,8 +186,7 @@ GITHUB_TOKEN=your_token_here
 # Run directly
 python run.py
 
-# Test WebView2 bootstrapper
-python app\utils\webview2_bootstrapper.py --interactive
+
 
 # Clean JavaScript
 python scripts\clean_js.py
@@ -278,10 +251,6 @@ Smart App Control (SAC) often blocks unsigned applications with low reputation. 
 - Install USB drivers
 - Try different USB port
 
-**"GitHub API errors"**
-- Verify `GITHUB_TOKEN` in `.env`
-- Check token permissions (repo access)
-- Ensure `.env` is in same directory as executable
 
 ---
 

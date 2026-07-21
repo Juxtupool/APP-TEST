@@ -1,0 +1,8 @@
+{
+  "name": "overcontrol-workspace",
+  "version": "1.0.0",
+  "description": "Workspace helper scripts",
+  "scripts": {
+    "pocketbase": "pocketbase_local\\pocketbase.exe serve"
+  }
+}

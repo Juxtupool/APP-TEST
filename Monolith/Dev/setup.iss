@@ -4,11 +4,18 @@
 #define MyAppName "Overcontrol"
 #define MyAppVersion "1.0.5"
 #define MyAppPublisher "Overcontrol"
-#define MyAppURL "https://github.com/Juxtupool/APP-TEST"
 #define MyAppExeName "Overcontrol.exe"
 #define SourceDir "dist\Overcontrol"
 
 [Setup]
+; To enable digital code signing:
+; 1. Configure a Sign Tool in the Inno Setup IDE (Tools -> Configure Sign Tools...) named 'MySignTool'
+;    Command: "signtool.exe sign /a /fd sha256 /tr http://timestamp.digicert.com /td sha256 $f"
+; 2. Uncomment the SignTool line below:
+; SignTool=MySignTool
+; 3. Add the 'sign' flag to the executable file source under [Files]:
+;    Source: "{#SourceDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion sign
+
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{A3D73045-832F-4386-A785-502690947098}

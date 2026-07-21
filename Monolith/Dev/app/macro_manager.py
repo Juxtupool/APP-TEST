@@ -163,6 +163,77 @@ class MacroExecutionService:
         self.keyboard = KeyboardController()
         self.mouse = MouseController()
 
+    def paste_text(self, text):
+        import win32clipboard
+        import win32con
+        
+        # Save current clipboard text
+        old_text = None
+        clipboard_opened = False
+        try:
+            win32clipboard.OpenClipboard()
+            clipboard_opened = True
+            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                old_text = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+            elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):
+                old_text = win32clipboard.GetClipboardData(win32clipboard.CF_TEXT)
+        except Exception as e:
+            logger.warning(f"Failed to read original clipboard: {e}")
+        finally:
+            if clipboard_opened:
+                try:
+                    win32clipboard.CloseClipboard()
+                except Exception:
+                    pass
+        
+        # Set new text to clipboard
+        clipboard_opened = False
+        try:
+            win32clipboard.OpenClipboard()
+            clipboard_opened = True
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
+        except Exception as e:
+            logger.error(f"Failed to set clipboard: {e}")
+            # Fallback to typing out if clipboard fails
+            self.keyboard.type(text)
+            return
+        finally:
+            if clipboard_opened:
+                try:
+                    win32clipboard.CloseClipboard()
+                except Exception:
+                    pass
+        
+        # Trigger Ctrl+V
+        try:
+            self.keyboard.press(Key.ctrl)
+            self.keyboard.press('v')
+            self.keyboard.release('v')
+            self.keyboard.release(Key.ctrl)
+        except Exception as e:
+            logger.error(f"Failed to press paste hotkey: {e}")
+            
+        # Wait a small delay to let the active application process the paste event before we restore the clipboard
+        time.sleep(0.08)
+        
+        # Restore original text
+        if old_text is not None:
+            clipboard_opened = False
+            try:
+                win32clipboard.OpenClipboard()
+                clipboard_opened = True
+                win32clipboard.EmptyClipboard()
+                win32clipboard.SetClipboardText(old_text, win32clipboard.CF_UNICODETEXT)
+            except Exception as e:
+                logger.warning(f"Failed to restore clipboard: {e}")
+            finally:
+                if clipboard_opened:
+                    try:
+                        win32clipboard.CloseClipboard()
+                    except Exception:
+                        pass
+
     def execute_macro(self, macro, depth=0):
         if depth > 5:
             logger.warning("Max macro nesting depth reached, potential infinite loop")
@@ -222,8 +293,12 @@ class MacroExecutionService:
             
             elif macro_type == "text":
                 text = macro.get("text", "")
+                method = macro.get("method", "paste")
                 if text:
-                    self.keyboard.type(text)
+                    if method == "paste":
+                        self.paste_text(text)
+                    else:
+                        self.keyboard.type(text)
                 return
             
             elif macro_type == "advanced":
@@ -346,14 +421,24 @@ class MacroExecutionService:
     def _is_command_safe(self, command: str) -> bool:
         dangerous_keywords = [
             "downloadstring", "downloadfile", "invoke-expression", "iex",
-            "invoke-webrequest", "iwr", "rmdir /s", "del /f", "format ",
-            "reg add", "net user", "net localgroup", "bitsadmin"
+            "invoke-webrequest", "iwr", "rmdir", "del ", "format ",
+            "reg add", "net user", "net localgroup", "bitsadmin",
+            "curl", "wget", "certutil", "ftp", "tftp", "http:", "https:",
+            "cmd.exe", "powershell.exe", "bash", "sh"
         ]
         cmd_lower = command.lower()
         for kw in dangerous_keywords:
             if kw in cmd_lower:
                 logger.error(f"SECURITY BLOCK: Blocked command due to dangerous keyword '{kw}'")
                 return False
+                
+        # Block command chaining/pipe/redirection operators in shell commands
+        # to prevent escaping command boundaries.
+        if cmd_lower.startswith(("powershell", "cmd")):
+            for char in [";", "&&", "||", "|", ">", "<"]:
+                if char in command:
+                    logger.error(f"SECURITY BLOCK: Blocked shell command due to chaining/redirection operator '{char}'")
+                    return False
         return True
 
 class MacroRecordingService:

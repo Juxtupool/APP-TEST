@@ -2,137 +2,26 @@
     "profiles": {
         "Default Profile": {
             "macros": {
-                "Notepad": {
-                    "name": "Notepad",
-                    "icon": "icons/Document/sticky-note-fill.svg",
-                    "type": "launch",
-                    "path": "C:\\Windows\\notepad.exe"
-                },
-                "test": {
-                    "name": "test",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "key_down",
-                            "value": "Shift"
-                        },
-                        {
-                            "type": "key",
-                            "value": "P"
-                        },
-                        {
-                            "type": "key_up",
-                            "value": "Shift"
-                        },
-                        {
-                            "type": "key",
-                            "value": "U"
-                        },
-                        {
-                            "type": "key",
-                            "value": "L"
-                        },
-                        {
-                            "type": "key",
-                            "value": "A"
-                        },
-                        {
-                            "type": "key",
-                            "value": "K"
-                        },
-                        {
-                            "type": "key",
-                            "value": "Space"
-                        },
-                        {
-                            "type": "key_down",
-                            "value": "Shift"
-                        },
-                        {
-                            "type": "key_down",
-                            "value": "N"
-                        },
-                        {
-                            "type": "key_up",
-                            "value": "Shift"
-                        },
-                        {
-                            "type": "key_up",
-                            "value": "N"
-                        },
-                        {
-                            "type": "key",
-                            "value": "A"
-                        },
-                        {
-                            "type": "key",
-                            "value": "Y"
-                        },
-                        {
-                            "type": "key",
-                            "value": "A"
-                        },
-                        {
-                            "type": "key",
-                            "value": "K"
-                        },
-                        {
-                            "type": "key",
-                            "value": "Enter"
-                        }
-                    ]
-                },
-                "Flow test": {
-                    "name": "Flow test",
-                    "type": "advanced",
-                    "actions": [
-                        {
-                            "type": "macro",
-                            "value": "Notepad"
-                        },
-                        {
-                            "type": "delay",
-                            "value": 500
-                        },
-                        {
-                            "type": "macro",
-                            "value": "test"
-                        },
-                        {
-                            "type": "delay",
-                            "value": 0
-                        },
-                        {
-                            "type": "macro",
-                            "value": "Play/Pause"
-                        }
-                    ]
-                },
-                "Spotify (No Ads)": {
-                    "name": "Spotify (No Ads)",
-                    "icon": "icons/Logos/spotify-fill.svg",
+                "Spotify": {
+                    "name": "Spotify",
                     "type": "command",
                     "command": "spicetify auto"
                 }
             },
             "keys": {
-                "1": "Notepad",
                 "2": "Previous Track",
-                "3": "Flow test",
+                "3": "Spotify",
                 "4": "Play/Pause",
-                "5": "Spotify (No Ads)",
                 "6": "Next Track"
             },
             "knobs": {},
-            "knob_mode": "Standard",
             "linked_apps": []
         }
     },
     "active_profile": "Default Profile",
+    "minimize_to_tray": false,
+    "accent_color": "#bee628",
     "saved_colors": [
-        "#0091ff"
-    ],
-    "accent_color": "#0091ff",
-    "minimize_to_tray": true,
-    "theme": "carbon-black"
+        "#ff0000"
+    ]
 }

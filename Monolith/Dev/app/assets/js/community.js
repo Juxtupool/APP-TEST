@@ -6,6 +6,29 @@ let currentFilter = 'all';
 let currentSort = 'recent';
 let communityMacros = [];
 let fullCommunityMacrosCache = []; // Cache for client-side search/reset
+let userStarredMacros = [];
+
+async function syncStarredMacros() {
+    try {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.get_starred_macros) {
+            const res = await window.pywebview.api.get_starred_macros();
+            if (res && res.status === 'success' && Array.isArray(res.starred)) {
+                userStarredMacros = res.starred;
+                try {
+                    localStorage.setItem('starred_macros', JSON.stringify(userStarredMacros));
+                } catch (e) {}
+                return;
+            }
+        }
+    } catch (e) {
+        console.error("Error syncing starred macros:", e);
+    }
+    try {
+        userStarredMacros = JSON.parse(localStorage.getItem('starred_macros') || '[]');
+    } catch (e) {
+        userStarredMacros = [];
+    }
+}
 
 // Initialize Community features
 async function initCommunity() {
@@ -68,6 +91,8 @@ async function loadCommunityMacros(forceRefresh = false) {
     const grid = document.getElementById('community-macros-grid');
     if (!grid) return;
 
+    await syncStarredMacros();
+
     // Only show loading if we don't have a cache yet, or if forced
     if (fullCommunityMacrosCache.length === 0 || forceRefresh) {
         grid.innerHTML = '<div class="community-loading"><i class="fa-solid fa-spinner"></i><p>Loading community macros...</p></div>';
@@ -86,7 +111,7 @@ async function loadCommunityMacros(forceRefresh = false) {
                 <div class="empty-state">
                     <i class="fa-solid fa-exclamation-triangle"></i>
                     <h4>Could not load macros</h4>
-                    <p>${result.message || 'Configure GitHub repository in config.json'}</p>
+                    <p>${result.message || 'Unable to connect to community library'}</p>
                 </div>
             `;
         }
@@ -96,7 +121,7 @@ async function loadCommunityMacros(forceRefresh = false) {
             <div class="empty-state">
                 <i class="fa-solid fa-cloud-arrow-down"></i>
                 <h4>No Community Macros</h4>
-                <p>Configure GitHub repository in config.json to browse community macros</p>
+                <p>Unable to connect to community library</p>
             </div>
         `;
     }
@@ -166,6 +191,86 @@ function displayCommunityMacros() {
         });
     });
 
+    // Add event listeners for stars
+    grid.querySelectorAll('.clickable-star-btn').forEach(starBtn => {
+        starBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const macroId = starBtn.dataset.id;
+            if (!macroId) return;
+
+            const isStarred = starBtn.classList.contains('starred');
+            let starred = [];
+            try {
+                starred = JSON.parse(localStorage.getItem('starred_macros') || '[]');
+            } catch (err) {
+                starred = [];
+            }
+
+            const card = starBtn.closest('.macro-card');
+            const countEl = card ? card.querySelector('.like-count') : null;
+            const macroObj = communityMacros.find(m => m.id === macroId);
+
+            if (isStarred) {
+                // Toggle OFF: unstar and decrement count
+                starBtn.classList.remove('starred');
+                starBtn.title = "Star macro";
+                userStarredMacros = userStarredMacros.filter(id => id !== macroId);
+                try {
+                    localStorage.setItem('starred_macros', JSON.stringify(userStarredMacros));
+                } catch (err) {}
+
+                let newLikes = Math.max(0, (macroObj ? macroObj.likes : parseInt(countEl ? countEl.textContent : '1')) - 1);
+                if (countEl) countEl.textContent = newLikes;
+                if (macroObj) macroObj.likes = newLikes;
+
+                try {
+                    if (window.pywebview && window.pywebview.api && window.pywebview.api.toggle_star_macro_state) {
+                        window.pywebview.api.toggle_star_macro_state(macroId, false);
+                    }
+                    const result = await pywebview.api.unlike_community_macro(macroId);
+                    if (result && result.status === 'success') {
+                        if (countEl) countEl.textContent = result.likes;
+                        if (macroObj) macroObj.likes = result.likes;
+                    }
+                } catch (err) {
+                    console.error("Unstar error:", err);
+                }
+            } else {
+                // Toggle ON: star and increment count
+                starBtn.classList.add('starred');
+                starBtn.title = "Starred";
+                if (!userStarredMacros.includes(macroId)) {
+                    userStarredMacros.push(macroId);
+                    try {
+                        localStorage.setItem('starred_macros', JSON.stringify(userStarredMacros));
+                    } catch (err) {}
+                }
+
+                let newLikes = (macroObj ? macroObj.likes : parseInt(countEl ? countEl.textContent : '0')) + 1;
+                if (countEl) countEl.textContent = newLikes;
+                if (macroObj) macroObj.likes = newLikes;
+
+                try {
+                    if (window.pywebview && window.pywebview.api && window.pywebview.api.toggle_star_macro_state) {
+                        window.pywebview.api.toggle_star_macro_state(macroId, true);
+                    }
+                    const result = await pywebview.api.like_community_macro(macroId);
+                    if (result && result.status === 'success') {
+                        if (countEl) countEl.textContent = result.likes;
+                        if (macroObj) macroObj.likes = result.likes;
+                    } else {
+                        starBtn.classList.remove('starred');
+                        starBtn.title = "Star macro";
+                    }
+                } catch (err) {
+                    console.error("Star error:", err);
+                    starBtn.classList.remove('starred');
+                    starBtn.title = "Star macro";
+                }
+            }
+        });
+    });
+
 
 }
 
@@ -185,10 +290,8 @@ async function searchCommunityMacros(query) {
         const name = (m.name || '').toLowerCase();
         const desc = (m.description || '').toLowerCase();
         const author = (m.author || '').toLowerCase();
-        // Also check tags
-        const tags = (m.tags || []).join(' ').toLowerCase();
 
-        return name.includes(lowerQ) || desc.includes(lowerQ) || author.includes(lowerQ) || tags.includes(lowerQ);
+        return name.includes(lowerQ) || desc.includes(lowerQ) || author.includes(lowerQ);
     });
 
     displayCommunityMacros();
@@ -200,8 +303,20 @@ async function searchCommunityMacros(query) {
 function createMacroCard(macro) {
     const metadata = macro._metadata || {};
     const category = (macro.category || metadata.category || 'other').toLowerCase();
-    const tags = (macro.tags || []).slice(0, 3);
     const isProfile = macro.type === 'profile';
+    const macroName = macro.name || 'Unnamed';
+
+    // Check if already installed
+    let isInstalled = false;
+    if (isProfile) {
+        isInstalled = window.profiles && window.profiles[macroName] !== undefined;
+    } else {
+        const activeProfile = window.currentProfile;
+        if (window.profiles && activeProfile && window.profiles[activeProfile]) {
+            const profileMacros = window.profiles[activeProfile].macros || {};
+            isInstalled = profileMacros[macroName] !== undefined;
+        }
+    }
 
     // Icon based on type/category
     let iconClass = 'fa-solid fa-bolt';
@@ -228,6 +343,34 @@ function createMacroCard(macro) {
         dateStr = new Date(uploadDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
     const likes = macro.likes || 0;
+    const downloads = macro.downloads || 0;
+
+    // Check if user has already starred this macro
+    let starredMacros = userStarredMacros;
+    if (!starredMacros || starredMacros.length === 0) {
+        try {
+            starredMacros = JSON.parse(localStorage.getItem('starred_macros') || '[]');
+        } catch (e) {
+            starredMacros = [];
+        }
+    }
+    const isStarred = macro.id && starredMacros.includes(macro.id);
+
+    let buttonHtml = '';
+    if (isInstalled) {
+        buttonHtml = `
+            <button class="macro-card-btn installed" disabled>
+                <i class="fa-solid fa-check"></i> Installed
+            </button>
+        `;
+    } else {
+        buttonHtml = `
+            <button class="macro-card-btn ${isProfile ? 'btn-profile' : ''}" data-macro="${macroJson}">
+                <i class="fa-solid ${buttonIcon}"></i>
+                ${buttonText}
+            </button>
+        `;
+    }
 
     return `
         <div class="${cardClass}">
@@ -245,15 +388,17 @@ function createMacroCard(macro) {
                 </div>
             </div>
             <p class="macro-card-description">${escapeHtml(macro.description || 'No description provided')}</p>
-            ${tags.length > 0 ? `
-                <div class="macro-card-tags">
-                    ${tags.map(tag => `<span class="macro-tag">#${escapeHtml(tag)}</span>`).join('')}
-                </div>
-            ` : ''}
+            <div class="macro-card-stats">
+                <span class="stat-item">
+                    <i class="fa-solid fa-star"></i> <span class="like-count">${likes}</span>
+                </span>
+                <span class="stat-item"><i class="fa-solid fa-download"></i> ${downloads}</span>
+                <span class="stat-item date"><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
+            </div>
             <div class="macro-card-footer">
-                <button class="macro-card-btn ${isProfile ? 'btn-profile' : ''}" data-macro="${macroJson}">
-                    <i class="fa-solid ${buttonIcon}"></i>
-                    ${buttonText}
+                ${buttonHtml}
+                <button class="macro-star-btn clickable-star-btn ${isStarred ? 'starred' : ''}" data-id="${macro.id || ''}" title="${isStarred ? 'Starred' : 'Star macro'}">
+                    <i class="fa-solid fa-star"></i>
                 </button>
             </div>
         </div>
@@ -263,32 +408,37 @@ function createMacroCard(macro) {
 // Install community macro
 async function installCommunityMacro(macroData) {
     try {
-        const result = await pywebview.api.install_community_macro(macroData);
+        let downloadedMacros = [];
+        try {
+            downloadedMacros = JSON.parse(localStorage.getItem('downloaded_macros') || '[]');
+        } catch (e) {}
+        const isAlreadyDownloaded = macroData.id && downloadedMacros.includes(macroData.id);
+
+        const result = await pywebview.api.install_community_macro(macroData, !isAlreadyDownloaded);
 
         if (result.status === 'success') {
-            if (result.type === 'profile') {
-                await showAlert("", `Profile <strong>"${result.name}"</strong> activated!`, "success");
-                // Refresh profiles
-                if (typeof window.loadProfiles === 'function') {
-                    await window.loadProfiles();
-                } else if (typeof loadProfiles === 'function') {
-                    await loadProfiles();
-                } else {
-                    location.reload(); // Fallback if loadProfiles isn't available in scope
-                }
-            } else {
-                await showAlert("", `Macro <strong>"${result.name}"</strong> added!`, "success");
-                // Refresh profiles first so the new macro is loaded into memory, which automatically updates the list
-                if (typeof window.loadProfiles === 'function') {
-                    await window.loadProfiles();
-                } else if (typeof loadProfiles === 'function') {
-                    await loadProfiles();
-                } else if (typeof window.updateMacroList === 'function') {
-                    window.updateMacroList();
-                } else if (typeof updateMacroList === 'function') {
-                    updateMacroList();
-                }
+            if (macroData.id && !isAlreadyDownloaded) {
+                try {
+                    downloadedMacros.push(macroData.id);
+                    localStorage.setItem('downloaded_macros', JSON.stringify(downloadedMacros));
+                } catch (e) {}
             }
+            // Refresh profiles first to load into memory
+            if (typeof window.loadProfiles === 'function') {
+                await window.loadProfiles();
+            } else if (typeof loadProfiles === 'function') {
+                await loadProfiles();
+            }
+            
+            // Update macro list UI if on settings screen
+            if (typeof window.updateMacroList === 'function') {
+                window.updateMacroList();
+            } else if (typeof updateMacroList === 'function') {
+                updateMacroList();
+            }
+            
+            // Re-render community grid to show checkmarks
+            displayCommunityMacros();
         } else {
             await showAlert("", result.message || "Failed to install item", "danger");
         }
@@ -359,7 +509,6 @@ async function showSubmitMacroModal() {
         const type = modal.querySelector('input[name="submit-type"]:checked').value;
         const creator = document.getElementById('submit-creator').value.trim();
         const description = document.getElementById('submit-description').value.trim();
-        const tags = document.getElementById('submit-tags').value.trim();
         const category = document.getElementById('submit-category').value;
 
         // Validation
@@ -387,7 +536,6 @@ async function showSubmitMacroModal() {
                 author: creator,
                 description: description,
                 category: category,
-                tags: tags.split(',').map(t => t.trim()).filter(t => t),
                 type: 'macro',
                 macro: macroData
             };
@@ -404,7 +552,6 @@ async function showSubmitMacroModal() {
                 author: creator,
                 description: description,
                 category: category,
-                tags: tags.split(',').map(t => t.trim()).filter(t => t),
                 type: 'profile',
                 profile: {
                     macros: profileData.macros || {},

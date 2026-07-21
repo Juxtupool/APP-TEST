@@ -41,16 +41,6 @@ Professional macro pad control software for NodeMCU-based hardware.
 
 ## Configuration
 
-### GitHub Token (Optional)
-
-For community features, create a `.env` file next to the executable:
-
-```
-GITHUB_TOKEN=your_github_personal_access_token
-```
-
-Get a token from: https://github.com/settings/tokens
-
 ### Profiles
 
 Profiles are stored in `profiles.json` and are automatically backed up.
@@ -78,7 +68,6 @@ pip install -r requirements.txt
 
 # Configure environment
 Copy-Item .env.example .env
-# Edit .env and add your GITHUB_TOKEN
 
 # Run application
 python run.py
@@ -100,10 +89,12 @@ See [BUILD_GUIDE.md](BUILD_GUIDE.md) for detailed instructions.
 ```
 ├── app/
 │   ├── assets/         # UI files (HTML, CSS, JS)
-│   ├── services/       # Backend services
-│   ├── utils/          # Utilities & bootstrapper
-│   ├── api.py          # Main API
-│   └── main.py         # Entry point
+│   ├── tests/          # Unit tests for services
+│   ├── api.py          # Consolidated backend services & API exposure
+│   ├── macro_manager.py # Keyboard/mouse macro execution & recording
+│   ├── main.py         # Entry point & tray manager
+│   ├── serial_manager.py # Serial communication & hardware flashing
+│   └── version.py      # App version definitions
 ├── scripts/            # Build automation
 ├── firmware/           # NodeMCU firmware
 └── requirements.txt    # Dependencies
@@ -153,13 +144,6 @@ Install manually: https://developer.microsoft.com/microsoft-edge/webview2/
 
 - Check USB connection
 - Try different USB port
-
-
-### "GitHub API errors"
-
-- Verify GITHUB_TOKEN in `.env`
-- Check token hasn't expired
-- Ensure token has `repo` scope
 
 ## Contributing
 

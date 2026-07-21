@@ -24,6 +24,7 @@ class SerialListener(threading.Thread):
         self.daemon = True
 
     def run(self):
+        consecutive_errors = 0
         while self.running:
             try:
                 with self.lock:
@@ -31,15 +32,17 @@ class SerialListener(threading.Thread):
                         break
                     line = self.ser.readline().decode('utf-8', errors='ignore').strip()
                 
+                consecutive_errors = 0
                 if line and self.on_message:
                     self.on_message(line)
-            except serial.SerialException:
-                self.running = False
-                if self.on_disconnect:
-                    self.on_disconnect()
-            except Exception as e:
-                logger.error(f"Error in serial listener: {e}")
-                pass
+            except (serial.SerialException, OSError, Exception) as e:
+                consecutive_errors += 1
+                logger.warning(f"Error in serial listener: {e}")
+                if consecutive_errors >= 2 or not (self.ser and self.ser.is_open):
+                    self.running = False
+                    if self.on_disconnect:
+                        self.on_disconnect()
+                    break
             
             time.sleep(0.01)
 
@@ -66,7 +69,7 @@ class SerialService:
             return self.ser is not None and self.ser.is_open
 
     def check_physical_connection_health(self):
-        if not self.port:
+        if not self.port or not self.ser or not self.ser.is_open:
             return False
             
         try:
@@ -78,9 +81,18 @@ class SerialService:
                 self._last_connected_port = last_port
                 self.on_connection_lost()
                 return False
+            
+            # Verify the OS serial handle is active (catches handle death post PC sleep/wake)
+            with self.lock:
+                _ = self.ser.in_waiting
+                self.ser.flush()
             return True
         except Exception as e:
-            logger.error(f"Error checking physical connection health: {e}")
+            logger.warning(f"Serial handle health check failed (post PC sleep/wake): {e}")
+            last_port = self.port
+            self.disconnect()
+            self._last_connected_port = last_port
+            self.on_connection_lost()
             return False
 
     def get_available_ports(self, use_cache=True):
@@ -101,7 +113,7 @@ class SerialService:
                     continue
                 
                 is_monolith = 'monolith' in desc.lower() or 'monolith' in hwid.lower()
-                is_rp2040 = '2E8A:0002' in hwid or '2E8A:0003' in hwid
+                is_rp2040 = '2E8A:0002' in hwid or '2E8A:0003' in hwid or '239A:CAFE' in hwid or '239A:' in hwid
                 is_ch552 = '1209:C550' in hwid
                 
                 if is_monolith or is_rp2040 or is_ch552:
@@ -200,6 +212,16 @@ class SerialService:
             self.on_message_callback(message)
 
     def on_connection_lost(self):
+        last_port = self.port
+        if self.ser:
+            try:
+                self.ser.close()
+            except Exception:
+                pass
+            self.ser = None
+        self.port = None
+        if last_port:
+            self._last_connected_port = last_port
         if self.on_connection_lost_callback:
             self.on_connection_lost_callback()
 
