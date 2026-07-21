@@ -4,11 +4,32 @@
             "macros": {
                 "Spotify": {
                     "name": "Spotify",
+                    "icon": "icons/Logos/spotify-fill.svg",
                     "type": "command",
                     "command": "spicetify auto"
+                },
+                "Antigravity": {
+                    "icon": "icons/Logos/gemini-fill.svg",
+                    "name": "Antigravity",
+                    "path": "C:\\Users\\pulak\\AppData\\Local\\Programs\\Antigravity IDE\\Antigravity IDE.exe",
+                    "type": "launch",
+                    "origin": "community"
                 }
             },
             "keys": {
+                "1": "Antigravity",
+                "2": "Previous Track",
+                "3": "Spotify",
+                "4": "Play/Pause",
+                "6": "Next Track"
+            },
+            "knobs": {},
+            "linked_apps": []
+        },
+        "Desktop": {
+            "macros": {},
+            "keys": {
+                "1": "Antigravity",
                 "2": "Previous Track",
                 "3": "Spotify",
                 "4": "Play/Pause",
@@ -18,9 +39,9 @@
             "linked_apps": []
         }
     },
-    "active_profile": "Default Profile",
+    "active_profile": "Desktop",
     "minimize_to_tray": false,
-    "accent_color": "#bee628",
+    "accent_color": "#0091ff",
     "saved_colors": [
         "#ff0000"
     ]

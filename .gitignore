@@ -1,0 +1,24 @@
+# Environment & IDE tooling
+.agents/
+.vscode/
+.wrangler/
+.code-review-graph/
+skills-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -64,6 +64,7 @@ migrate((db) => {
             "productivity",
             "creative",
             "gaming",
+            "entertainment",
             "office",
             "other"
           ]

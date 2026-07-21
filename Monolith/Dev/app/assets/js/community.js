@@ -161,7 +161,7 @@ function displayCommunityMacros() {
     } else if (currentSort === 'profiles_only') {
         filtered = filtered.filter(m => m.type === 'profile');
     } else if (currentSort === 'macros_only') {
-        filtered = filtered.filter(m => m.type === 'macro' || !m.type);
+        filtered = filtered.filter(m => m.type !== 'profile');
     }
 
     if (filtered.length === 0) {
@@ -311,10 +311,14 @@ function createMacroCard(macro) {
     if (isProfile) {
         isInstalled = window.profiles && window.profiles[macroName] !== undefined;
     } else {
-        const activeProfile = window.currentProfile;
-        if (window.profiles && activeProfile && window.profiles[activeProfile]) {
-            const profileMacros = window.profiles[activeProfile].macros || {};
-            isInstalled = profileMacros[macroName] !== undefined;
+        if (typeof window.getUserMacroData === 'function') {
+            isInstalled = window.getUserMacroData(macroName) !== null;
+        } else {
+            const activeProfile = window.currentProfile;
+            if (window.profiles && activeProfile && window.profiles[activeProfile]) {
+                const profileMacros = window.profiles[activeProfile].macros || {};
+                isInstalled = profileMacros[macroName] !== undefined;
+            }
         }
     }
 
@@ -456,17 +460,15 @@ async function showSubmitMacroModal() {
     const macroSelect = document.getElementById('submit-macro-select');
     const profileSelect = document.getElementById('submit-profile-select');
 
-    // Populate macro dropdown from current profile
+    // Populate macro dropdown from all profiles
     macroSelect.innerHTML = '<option value="">-- Choose a macro --</option>';
-    const currentProfileData = profiles[currentProfile];
-    if (currentProfileData && currentProfileData.macros) {
-        Object.keys(currentProfileData.macros).forEach(macroName => {
-            const option = document.createElement('option');
-            option.value = macroName;
-            option.textContent = macroName;
-            macroSelect.appendChild(option);
-        });
-    }
+    const allUserMacrosMap = (typeof window.getAllUserMacros === 'function') ? window.getAllUserMacros() : (currentProfileData && currentProfileData.macros ? currentProfileData.macros : {});
+    Object.keys(allUserMacrosMap).forEach(macroName => {
+        const option = document.createElement('option');
+        option.value = macroName;
+        option.textContent = macroName;
+        macroSelect.appendChild(option);
+    });
 
     // Populate profile dropdown
     profileSelect.innerHTML = '<option value="">-- Choose a profile --</option>';
@@ -530,7 +532,7 @@ async function showSubmitMacroModal() {
                 return;
             }
 
-            const macroData = currentProfileData.macros[selectedMacro];
+            const macroData = (typeof window.getUserMacroData === 'function') ? window.getUserMacroData(selectedMacro) : (currentProfileData && currentProfileData.macros ? currentProfileData.macros[selectedMacro] : null);
             submissionData = {
                 name: selectedMacro,
                 author: creator,

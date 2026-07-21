@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Desktop",
+    "author": "Dev",
+    "description": "Desktop Profile",
+    "category": "productivity",
+    "tags": [],
+    "uploaded_at": "2026-07-21T23:43:38.977706",
+    "type": "profile",
+    "profile": {
+      "macros": {},
+      "keys": {
+        "1": "Antigravity",
+        "2": "Previous Track",
+        "3": "Spotify",
+        "4": "Play/Pause",
+        "6": "Next Track"
+      },
+      "knobs": {},
+      "knob_mode": "Standard"
+    }
+  },
+  {
+    "name": "Spotify",
+    "author": "Dev",
+    "description": "Launches Spotify",
+    "category": "entertainment",
+    "tags": [],
+    "uploaded_at": "2026-07-21T23:35:37.942525",
+    "icon": "icons/Logos/spotify-fill.svg",
+    "type": "command",
+    "command": "spicetify auto"
+  }
+]

@@ -548,8 +548,9 @@ function updateUIForProfile() {
 
             // Check for icon
             let customIcon = null;
-            if (profiles[currentProfile].macros && profiles[currentProfile].macros[macroName]) {
-                customIcon = profiles[currentProfile].macros[macroName].icon;
+            const mData = getUserMacroData(macroName);
+            if (mData && mData.icon) {
+                customIcon = mData.icon;
             }
 
             if (customIcon) {
@@ -1329,6 +1330,40 @@ function updateMacroList() {
     renderSpecificMacroList('knob-macro-list-legacy', 'knob-macro-list-user');
 }
 
+function getAllUserMacros() {
+    const allMacros = {};
+    const profs = window.profiles || (typeof profiles !== 'undefined' ? profiles : {});
+    if (!profs) return allMacros;
+    Object.keys(profs).forEach(pName => {
+        const pMacros = profs[pName] ? profs[pName].macros : null;
+        if (pMacros && typeof pMacros === 'object') {
+            Object.keys(pMacros).forEach(mName => {
+                if (!allMacros[mName]) {
+                    allMacros[mName] = pMacros[mName];
+                }
+            });
+        }
+    });
+    return allMacros;
+}
+window.getAllUserMacros = getAllUserMacros;
+
+function getUserMacroData(macroName) {
+    if (!macroName) return null;
+    const profs = window.profiles || (typeof profiles !== 'undefined' ? profiles : {});
+    if (!profs) return null;
+    if (typeof currentProfile !== 'undefined' && profs[currentProfile] && profs[currentProfile].macros && profs[currentProfile].macros[macroName]) {
+        return profs[currentProfile].macros[macroName];
+    }
+    for (const pName of Object.keys(profs)) {
+        if (profs[pName] && profs[pName].macros && profs[pName].macros[macroName]) {
+            return profs[pName].macros[macroName];
+        }
+    }
+    return null;
+}
+window.getUserMacroData = getUserMacroData;
+
 function renderSpecificMacroList(legacyId, userId) {
     const listLegacy = document.getElementById(legacyId);
     const listUser = document.getElementById(userId);
@@ -1371,7 +1406,8 @@ function renderSpecificMacroList(legacyId, userId) {
         console.warn("Profile not found:", currentProfile);
         return;
     }
-    const customMacros = Object.keys(profiles[currentProfile].macros || {});
+    const allUserMacrosMap = getAllUserMacros();
+    const customMacros = Object.keys(allUserMacrosMap);
 
     // -- LEGACY TAB CONTENT --
     systemMacros.forEach(macroName => {
@@ -1415,7 +1451,7 @@ function renderSpecificMacroList(legacyId, userId) {
     } else {
         // List Custom Macros
         customMacros.forEach(macroName => {
-            const macroData = (profiles[currentProfile] && profiles[currentProfile].macros) ? profiles[currentProfile].macros[macroName] : null;
+            const macroData = allUserMacrosMap[macroName];
             const item = document.createElement('div');
             item.className = 'macro-item';
             item.setAttribute('role', 'button');
@@ -1517,20 +1553,25 @@ async function assignMacro(macroName) {
 async function deleteMacro(macroName) {
     const confirmDelete = await showConfirm("Delete Macro", `Delete macro "${macroName}"?`, "danger", "Delete");
     if (confirmDelete) {
-        if (profiles[currentProfile] && profiles[currentProfile].macros && profiles[currentProfile].macros[macroName]) {
-            delete profiles[currentProfile].macros[macroName];
-
-            // Clean up assignments
-            const p = profiles[currentProfile];
-            // Keys
-            Object.keys(p.keys).forEach(k => {
-                if (p.keys[k] === macroName) delete p.keys[k];
-            });
-            // Knobs
-            Object.keys(p.knobs).forEach(k => {
-                if (p.knobs[k] === macroName) delete p.knobs[k];
-            });
-
+        let deleted = false;
+        Object.keys(profiles).forEach(pName => {
+            const p = profiles[pName];
+            if (p.macros && p.macros[macroName]) {
+                delete p.macros[macroName];
+                deleted = true;
+            }
+            if (p.keys) {
+                Object.keys(p.keys).forEach(k => {
+                    if (p.keys[k] === macroName) delete p.keys[k];
+                });
+            }
+            if (p.knobs) {
+                Object.keys(p.knobs).forEach(k => {
+                    if (p.knobs[k] === macroName) delete p.knobs[k];
+                });
+            }
+        });
+        if (deleted) {
             await saveProfiles();
             updateUIForProfile();
         }
@@ -1804,9 +1845,9 @@ function openMacroEditor(macroName = null) {
 
     if (macroName && typeof macroName === 'string') {
         nameInput.value = macroName;
-        // Load existing macro data
-        if (profiles[currentProfile].macros && profiles[currentProfile].macros[macroName]) {
-            const macroData = profiles[currentProfile].macros[macroName];
+        // Load existing macro data across profiles
+        const macroData = getUserMacroData(macroName);
+        if (macroData) {
 
             if (macroData.type === "advanced") {
                 recordedKeys = [...macroData.actions];
@@ -2319,13 +2360,12 @@ async function closeMacroEditor() {
     }, 300); // Wait for transition
 }
 
-// --- Custom Filter Dropdown Logic ---
 const btnFilterToggle = document.getElementById('btn-community-filter');
 const dropdownMenu = document.getElementById('community-filter-dropdown');
 const hiddenSelect = document.getElementById('community-sort');
-const dropdownItems = document.querySelectorAll('.dropdown-item');
 
 if (btnFilterToggle && dropdownMenu && hiddenSelect) {
+    const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
     // Toggle Dropdown
     btnFilterToggle.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -2530,8 +2570,9 @@ btnSaveMacro.addEventListener('click', async () => {
 
     if (!profiles[currentProfile].macros) profiles[currentProfile].macros = {};
 
-    // Check if name exists (if new or renamed)
-    if (name !== editingMacroName && profiles[currentProfile].macros[name]) {
+    // Check if name exists across any profile (if new or renamed)
+    const existingMacro = getUserMacroData(name);
+    if (name !== editingMacroName && existingMacro) {
         const confirmOverwrite = await showConfirm("Overwrite Macro", `Macro "${name}" already exists. Overwrite?`);
         if (!confirmOverwrite) {
             return;
@@ -2581,20 +2622,27 @@ btnSaveMacro.addEventListener('click', async () => {
         macroData.actions = recordedKeys;
     }
 
-    // If renaming, delete old one
+    // If renaming, delete old one from all profiles and update key/knob assignments
     if (editingMacroName && name !== editingMacroName) {
-        delete profiles[currentProfile].macros[editingMacroName];
-
-        const p = profiles[currentProfile];
-        Object.keys(p.keys).forEach(k => {
-            if (p.keys[k] === editingMacroName) p.keys[k] = name;
-        });
-        Object.keys(p.knobs).forEach(k => {
-            if (p.knobs[k] === editingMacroName) p.knobs[k] = name;
+        Object.keys(profiles).forEach(pName => {
+            const p = profiles[pName];
+            if (p.macros && p.macros[editingMacroName]) {
+                delete p.macros[editingMacroName];
+            }
+            if (p.keys) {
+                Object.keys(p.keys).forEach(k => {
+                    if (p.keys[k] === editingMacroName) p.keys[k] = name;
+                });
+            }
+            if (p.knobs) {
+                Object.keys(p.knobs).forEach(k => {
+                    if (p.knobs[k] === editingMacroName) p.knobs[k] = name;
+                });
+            }
         });
     }
 
-    // Save/Update
+    // Save/Update in active profile
     profiles[currentProfile].macros[name] = macroData;
 
     await saveProfiles();

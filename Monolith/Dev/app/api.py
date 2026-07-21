@@ -649,8 +649,15 @@ class CommunityLibraryService:
                 error_msg = f"PocketBase submission failed (Status {response.status_code})"
                 try:
                     error_json = response.json()
+                    details = []
                     if 'message' in error_json:
-                        error_msg += f": {error_json['message']}"
+                        details.append(error_json['message'])
+                    if 'data' in error_json and isinstance(error_json['data'], dict):
+                        field_errs = [f"{field}: {err.get('message', '')}" for field, err in error_json['data'].items() if isinstance(err, dict)]
+                        if field_errs:
+                            details.append("; ".join(field_errs))
+                    if details:
+                        error_msg += f": {' - '.join(details)}"
                 except Exception:
                     pass
                 return {"status": "error", "message": error_msg}
@@ -1919,6 +1926,11 @@ class Api:
 
     def _execute_macro_by_name(self, macro_name, profile_data):
         macro_data = profile_data.get("macros", {}).get(macro_name)
+        if not macro_data:
+            for p_name, p_data in self._profiles.get("profiles", {}).items():
+                if p_data.get("macros") and macro_name in p_data["macros"]:
+                    macro_data = p_data["macros"][macro_name]
+                    break
         if macro_data:
             self.execute_macro(macro_data)
         else:
@@ -1929,6 +1941,11 @@ class Api:
     def _resolve_macro_for_execution(self, macro_name):
         profile_data = self._profiles.get("profiles", {}).get(self._current_profile_name, {})
         macro_data = profile_data.get("macros", {}).get(macro_name)
+        if not macro_data:
+            for p_name, p_data in self._profiles.get("profiles", {}).items():
+                if p_data.get("macros") and macro_name in p_data["macros"]:
+                    macro_data = p_data["macros"][macro_name]
+                    break
         if macro_data:
             return macro_data
         system_macros = self._get_system_macros()
