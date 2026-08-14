@@ -22,15 +22,9 @@
     },
     "auto_switching": {
         "enabled": true,
-        "rules": {
-            "resolve.exe": "DaVinci Resolve"
-        }
-    },
-    "github": {
-        "firmware_repo": "",
-        "app_repo": ""
+        "rules": {}
     },
     "pocketbase": {
-        "url": "https://solitary-cake-d872.pulakataranga.workers.dev/"
+        "url": "http://104.197.204.47:8080"
     }
 }

@@ -138,46 +138,19 @@ def safe_api(func):
 class ThreadSafeUIBridge:
     def __init__(self):
         self._window = None
-        self._command_queue = queue.Queue()
-        self._shutdown = False
-        self._processor_thread = None
-        self._lock = threading.Lock()
-        
+
     def set_window(self, window):
-        with self._lock:
-            self._window = window
-            if self._processor_thread is None or not self._processor_thread.is_alive():
-                self._shutdown = False
-                self._processor_thread = threading.Thread(
-                    target=self._process_queue, 
-                    name="UIBridgeProcessor",
-                    daemon=True
-                )
-                self._processor_thread.start()
-        
-    def _process_queue(self):
-        while not self._shutdown:
-            try:
-                js_code = self._command_queue.get(timeout=0.5)
-                if self._window:
-                    try:
-                        self._window.evaluate_js(js_code)
-                    except Exception as e:
-                        pass
-                self._command_queue.task_done()
-            except queue.Empty:
-                continue
-            except Exception as e:
-                time.sleep(1)
-    
+        self._window = window
+
     def evaluate_js_safe(self, js_code: str) -> None:
-        self._command_queue.put(js_code)
-        if self._window and (self._processor_thread is None or not self._processor_thread.is_alive()):
-            self.set_window(self._window)
-    
+        if self._window:
+            try:
+                self._window.evaluate_js(js_code)
+            except Exception as e:
+                logger.error(f"Error evaluating JS: {e}")
+
     def shutdown(self):
-        self._shutdown = True
-        self._processor_thread = None
+        pass
 
 _ui_bridge = ThreadSafeUIBridge()
 def get_ui_bridge():
@@ -188,60 +161,21 @@ class ProfileService:
     def __init__(self, file_path="profiles.json"):
         self.file_path = file_path
         self._lock = threading.Lock()
-        
+
     def load_profiles(self):
         with self._lock:
-            if os.path.exists(self.file_path):
+            p = Path(self.file_path)
+            if p.exists():
                 try:
-                    with open(self.file_path, "r") as f:
-                        profiles = json.load(f)
-                        return profiles
-                except json.JSONDecodeError as e:
-                    logger.error(f"Profile file corrupted: {e}")
-                    backup_path = str(self.file_path) + ".backup"
-                    if os.path.exists(backup_path):
-                        try:
-                            with open(backup_path, "r") as f:
-                                return json.load(f)
-                        except Exception:
-                            pass
-                    return {"profiles": {"Default": self.get_default_profile()}}
+                    return json.loads(p.read_text(encoding="utf-8"))
                 except Exception as e:
                     logger.error(f"Error loading profiles: {e}")
-                    return {"profiles": {"Default": self.get_default_profile()}}
-            else:
-                return {"profiles": {"Default": self.get_default_profile()}}
+            return {"profiles": {"Default": self.get_default_profile()}}
 
     def save_profiles(self, profiles):
         with self._lock:
             try:
-                file_path_str = str(self.file_path)
-                if os.path.exists(file_path_str):
-                    backup_path = file_path_str + ".backup"
-                    try:
-                        shutil.copy2(file_path_str, backup_path)
-                    except OSError:
-                         logger.warning("Failed to create backup")
-                
-                temp_path = file_path_str + ".tmp"
-                with open(temp_path, "w", encoding="utf-8") as f:
-                    json.dump(profiles, f, indent=4)
-                    f.flush()
-                    os.fsync(f.fileno())
-                
-                max_retries = 5
-                for i in range(max_retries):
-                    try:
-                        if os.path.exists(file_path_str):
-                            os.replace(temp_path, file_path_str)
-                        else:
-                            os.rename(temp_path, file_path_str)
-                        break
-                    except OSError as e:
-                        if e.winerror == 32 and i < max_retries - 1:
-                            time.sleep(0.1)
-                            continue
-                        raise
+                Path(self.file_path).write_text(json.dumps(profiles, indent=4), encoding="utf-8")
                 return {"status": "success", "message": "Profiles saved"}
             except Exception as e:
                 logger.error(f"Error saving profiles: {e}")
@@ -487,11 +421,7 @@ class AppIconService:
 
 class CommunityLibraryService:
     def __init__(self, config: Dict):
-        self.config = config
-        self.pb_url = config.get('pocketbase', {}).get('url', '')
-        if not self.pb_url:
-            self.pb_url = config.get('community', {}).get('submission_url', '')
-        self.pb_url = self.pb_url.rstrip('/')
+        self.pb_url = config.get('pocketbase', {}).get('url', '').rstrip('/')
         
         self.session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=15, pool_maxsize=30)
@@ -635,7 +565,7 @@ class CommunityLibraryService:
                 "type": ctype,
                 "macro_data": macro_content,
                 "profile_data": profile_data,
-                "approved": False
+                "approved": True
             }
 
             url = f"{self.pb_url}/api/collections/macros/records"
@@ -644,7 +574,7 @@ class CommunityLibraryService:
             if response.status_code in [200, 201]:
                 logger.info("Successfully uploaded macro to PocketBase")
                 self._update_local_manifest(macro_data)
-                return {"status": "success", "message": "Macro submitted for review!"}
+                return {"status": "success", "message": "Macro published successfully!"}
             else:
                 error_msg = f"PocketBase submission failed (Status {response.status_code})"
                 try:
@@ -1000,10 +930,19 @@ class UpdateManager:
                     if save_path.exists():
                         os.remove(save_path)
                     return {'status': 'error', 'message': 'Update package integrity check failed.'}
+            else:
+                logger.warning("No SHA256 checksum file found for update package; proceeding without hash verification.")
             
             if filename.endswith(".zip"):
                  import zipfile
+                 base_dest = self.temp_dir.resolve()
                  with zipfile.ZipFile(save_path, 'r') as zip_ref:
+                      for member in zip_ref.infolist():
+                          member_path = (self.temp_dir / member.filename).resolve()
+                          if not str(member_path).startswith(str(base_dest)):
+                              if save_path.exists():
+                                  os.remove(save_path)
+                              return {'status': 'error', 'message': 'Security block: Malicious zip entry detected (Zip Slip traversal).'}
                       zip_ref.extractall(self.temp_dir)
                  os.remove(save_path)
                  contents = [c for c in self.temp_dir.iterdir() if not c.name.startswith('.')]
@@ -1141,22 +1080,25 @@ class Api:
         save_config(CONFIG_PATH, self._config)
 
     def _send_toast_notification(self, title, message):
+        safe_title = str(title).replace("`", "``").replace('"', '`"').replace("$", "`$")
+        safe_msg = str(message).replace("`", "``").replace('"', '`"').replace("$", "`$")
         ps_script = f"""
         [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime] > $null
         $template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
         $textNodes = $template.GetElementsByTagName("text")
-        $textNodes.Item(0).AppendChild($template.CreateTextNode("{title}")) > $null
-        $textNodes.Item(1).AppendChild($template.CreateTextNode("{message}")) > $null
+        $textNodes.Item(0).AppendChild($template.CreateTextNode("{safe_title}")) > $null
+        $textNodes.Item(1).AppendChild($template.CreateTextNode("{safe_msg}")) > $null
         $notification = [Windows.UI.Notifications.ToastNotification]::new($template)
         $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Overcontrol")
         $notifier.Show($notification)
         """
         try:
-            subprocess.run(["powershell", "-Command", ps_script], creationflags=subprocess.CREATE_NO_WINDOW)
+            encoded_script = base64.b64encode(ps_script.encode('utf-16le')).decode('utf-8')
+            subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded_script], creationflags=subprocess.CREATE_NO_WINDOW)
         except Exception as e:
             logger.error(f"Failed to send toast: {e}")
 
-    def _auto_switch_profile(self, profile_name: str):
+    def _auto_switch_profile(self, profile_name: str) -> bool:
         try:
             if profile_name in self._profiles.get("profiles", {}):
                 result = self.set_active_profile(profile_name, is_auto=True)
@@ -1166,10 +1108,14 @@ class Api:
                         self._ui_bridge.evaluate_js_safe(f"window.onAutoProfileSwitch({safe_name})")
                     self._send_toast_notification(f"Profile Switched to {profile_name}", "")
                     logger.info(f"Auto-switched to profile: {profile_name}")
+                    return True
                 else:
                     logger.error(f"Failed to auto-switch to profile: {profile_name}")
+            else:
+                logger.warning(f"Auto-switch target profile '{profile_name}' does not exist in active profiles.")
         except Exception as e:
             logger.error(f"Error in auto-switch callback: {e}")
+        return False
 
     @safe_api
     def on_serial_message(self, message: str):

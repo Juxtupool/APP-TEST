@@ -11,7 +11,14 @@
                 "Antigravity": {
                     "icon": "icons/Logos/gemini-fill.svg",
                     "name": "Antigravity",
-                    "path": "C:\\Users\\pulak\\AppData\\Local\\Programs\\Antigravity IDE\\Antigravity IDE.exe",
+                    "path": "%LOCALAPPDATA%\\Programs\\Antigravity IDE\\Antigravity IDE.exe",
+                    "type": "launch",
+                    "origin": "community"
+                },
+                "Notepad": {
+                    "icon": "icons/Document/sticky-note-fill.svg",
+                    "name": "Notepad",
+                    "path": "C:\\Windows\\notepad.exe",
                     "type": "launch",
                     "origin": "community"
                 }
@@ -39,7 +46,7 @@
             "linked_apps": []
         }
     },
-    "active_profile": "Desktop",
+    "active_profile": "Default Profile",
     "minimize_to_tray": false,
     "accent_color": "#0091ff",
     "saved_colors": [

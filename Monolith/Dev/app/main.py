@@ -66,11 +66,17 @@ def single_instance_check(title: str = "Overcontrol"):
                 hwnd = win32gui.FindWindow(None, "")
                 
         if hwnd and win32gui.IsWindow(hwnd):
-            if win32gui.IsIconic(hwnd):
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-            else:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-            win32gui.SetForegroundWindow(hwnd)
+            try:
+                w_title = win32gui.GetWindowText(hwnd)
+                w_class = win32gui.GetClassName(hwnd)
+                if title.lower() in w_title.lower() or w_title == "" or "pywebview" in w_class.lower() or "chrome" in w_class.lower():
+                    if win32gui.IsIconic(hwnd):
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    else:
+                        win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                    win32gui.SetForegroundWindow(hwnd)
+            except Exception as e:
+                logger.debug(f"Could not bring existing window to foreground: {e}")
         sys.exit(0)
 
 def restore_window(window, title: str = "Overcontrol"):

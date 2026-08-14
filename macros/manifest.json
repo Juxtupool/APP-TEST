@@ -1,5 +1,39 @@
 [
   {
+    "name": "Notepad",
+    "author": "Developer",
+    "description": "Launches Notepad",
+    "category": "productivity",
+    "tags": [],
+    "uploaded_at": "2026-08-05T23:18:58.913079",
+    "icon": "icons/Document/sticky-note-fill.svg",
+    "type": "launch",
+    "path": "C:\\Windows\\notepad.exe"
+  },
+  {
+    "name": "Antigravity",
+    "author": "Developer",
+    "description": "Launches Antigravity",
+    "category": "productivity",
+    "tags": [],
+    "uploaded_at": "2026-08-05T23:17:19.493767",
+    "icon": "icons/Logos/gemini-fill.svg",
+    "path": "%LOCALAPPDATA%\\Programs\\Antigravity IDE\\Antigravity IDE.exe",
+    "type": "launch",
+    "origin": "community"
+  },
+  {
+    "name": "Spotify",
+    "author": "Developer",
+    "description": "Launches Spotify",
+    "category": "entertainment",
+    "tags": [],
+    "uploaded_at": "2026-08-05T23:16:45.168147",
+    "icon": "icons/Logos/spotify-fill.svg",
+    "type": "command",
+    "command": "spicetify auto"
+  },
+  {
     "name": "Desktop",
     "author": "Dev",
     "description": "Desktop Profile",
@@ -19,16 +53,5 @@
       "knobs": {},
       "knob_mode": "Standard"
     }
-  },
-  {
-    "name": "Spotify",
-    "author": "Dev",
-    "description": "Launches Spotify",
-    "category": "entertainment",
-    "tags": [],
-    "uploaded_at": "2026-07-21T23:35:37.942525",
-    "icon": "icons/Logos/spotify-fill.svg",
-    "type": "command",
-    "command": "spicetify auto"
   }
 ]

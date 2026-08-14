@@ -23,19 +23,10 @@
     },
     "auto_switching": {
         "enabled": true,
-        "rules": {
-            "resolve.exe": "DaVinci Resolve"
-        }
-    },
-    "github": {
-        "firmware_repo": "Juxtupool/APP-TEST",
-        "app_repo": "Juxtupool/APP-TEST"
-    },
-    "community": {
-        "submission_url": "https://solitary-cake-d872.pulakataranga.workers.dev/"
+        "rules": {}
     },
     "pocketbase": {
-        "url": "http://127.0.0.1:8090"
+        "url": "http://104.197.204.47:8080"
     },
     "starred_macros": []
 }

@@ -7,6 +7,8 @@ import logging
 import ctypes
 import threading
 import json
+import re
+import shutil
 from pathlib import Path
 from pynput import keyboard
 from pynput.keyboard import Controller as KeyboardController, Key, KeyCode
@@ -227,12 +229,55 @@ class MacroExecutionService:
                 win32clipboard.SetClipboardText(old_text, win32clipboard.CF_UNICODETEXT)
             except Exception as e:
                 logger.warning(f"Failed to restore clipboard: {e}")
-            finally:
                 if clipboard_opened:
                     try:
                         win32clipboard.CloseClipboard()
                     except Exception:
                         pass
+
+    def _resolve_app_path(self, path: str) -> Optional[str]:
+        if not path:
+            return None
+        
+        # 1. Expand environment variables (%LOCALAPPDATA%, %APPDATA%, %USERPROFILE%, ~)
+        expanded = os.path.expandvars(os.path.expanduser(path))
+        if os.path.exists(expanded):
+            return expanded
+            
+        # 2. If path contains hardcoded user directory C:\Users\<username>\..., resolve for current user!
+        user_match = re.match(r'^[a-zA-Z]:\\Users\\[^\\]+\\(.*)$', path, re.IGNORECASE)
+        if user_match:
+            rel_subpath = user_match.group(1)
+            current_user_profile = os.getenv("USERPROFILE", "")
+            if current_user_profile:
+                adjusted = os.path.join(current_user_profile, rel_subpath)
+                if os.path.exists(adjusted):
+                    return adjusted
+
+        # 3. Dynamic lookup: Check system PATH and common application directories
+        exe_name = os.path.basename(path)
+        if exe_name:
+            which_path = shutil.which(exe_name)
+            if which_path and os.path.exists(which_path):
+                return which_path
+
+            common_base_dirs = [
+                os.getenv("LOCALAPPDATA", ""),
+                os.getenv("PROGRAMFILES", ""),
+                os.getenv("PROGRAMFILES(X86)", ""),
+                os.getenv("APPDATA", "")
+            ]
+            parent_folder = Path(path).parent.name
+            for cdir in common_base_dirs:
+                if cdir:
+                    candidate1 = Path(cdir) / "Programs" / parent_folder / exe_name
+                    candidate2 = Path(cdir) / parent_folder / exe_name
+                    if candidate1.exists():
+                        return str(candidate1)
+                    if candidate2.exists():
+                        return str(candidate2)
+
+        return None
 
     def execute_macro(self, macro, depth=0):
         if depth > 5:
@@ -243,25 +288,23 @@ class MacroExecutionService:
             
             if macro_type == "app" or macro_type == "launch":
                 try:
-                    path = macro.get("path", "")
-                    if not path:
+                    raw_path = macro.get("path", "")
+                    if not raw_path:
                         return
-                    if path.startswith(("http://", "https://")):
+                    if raw_path.startswith(("http://", "https://")):
                         from urllib.parse import urlparse
                         try:
-                            result = urlparse(path)
+                            result = urlparse(raw_path)
                             if all([result.scheme, result.netloc]):
-                                os.startfile(path)
+                                os.startfile(raw_path)
                         except Exception:
-                            logger.error(f"Failed to parse URL: {path}")
+                            logger.error(f"Failed to parse URL: {raw_path}")
                     else:
-                        path_obj = Path(path)
-                        try:
-                            abs_path = path_obj.resolve()
-                            if abs_path.exists():
-                                os.startfile(str(abs_path))
-                        except Exception:
-                            logger.error(f"Invalid path format: {path}")
+                        resolved_path = self._resolve_app_path(raw_path)
+                        if resolved_path and os.path.exists(resolved_path):
+                            os.startfile(resolved_path)
+                        else:
+                            logger.error(f"Could not locate executable for path: {raw_path}")
                 except Exception as e:
                     logger.error(f"Error launching application: {e}")
                 return
@@ -419,25 +462,27 @@ class MacroExecutionService:
         return key_map.get(key_str.lower(), key_str)
 
     def _is_command_safe(self, command: str) -> bool:
+        cmd_trimmed = command.strip()
+        cmd_lower = cmd_trimmed.lower()
+        
         dangerous_keywords = [
             "downloadstring", "downloadfile", "invoke-expression", "iex",
             "invoke-webrequest", "iwr", "rmdir", "del ", "format ",
             "reg add", "net user", "net localgroup", "bitsadmin",
             "curl", "wget", "certutil", "ftp", "tftp", "http:", "https:",
-            "cmd.exe", "powershell.exe", "bash", "sh"
+            "cmd.exe", "powershell.exe", "bash", "sh", "start-process",
+            "new-object", "system.net", "[system.io", "encodedcommand", "-enc "
         ]
-        cmd_lower = command.lower()
         for kw in dangerous_keywords:
             if kw in cmd_lower:
-                logger.error(f"SECURITY BLOCK: Blocked command due to dangerous keyword '{kw}'")
+                logger.error(f"SECURITY BLOCK: Blocked command due to dangerous keyword or flag '{kw}'")
                 return False
                 
-        # Block command chaining/pipe/redirection operators in shell commands
-        # to prevent escaping command boundaries.
+        # Block command chaining/pipe/redirection/subexpression operators in shell commands
         if cmd_lower.startswith(("powershell", "cmd")):
-            for char in [";", "&&", "||", "|", ">", "<"]:
+            for char in [";", "&&", "||", "|", ">", "<", "$(", "`"]:
                 if char in command:
-                    logger.error(f"SECURITY BLOCK: Blocked shell command due to chaining/redirection operator '{char}'")
+                    logger.error(f"SECURITY BLOCK: Blocked shell command due to operator/subexpression '{char}'")
                     return False
         return True
 
@@ -631,10 +676,14 @@ class ProfileSwitcherService:
                         target_profile = self.should_switch_profile(current_process)
                         if target_profile:
                             if target_profile != self.current_auto_profile:
-                                logger.info(f"Auto-switching: {current_process} -> {target_profile}")
-                                self.current_auto_profile = target_profile
+                                switched = True
                                 if self.on_profile_switch:
-                                    self.on_profile_switch(target_profile)
+                                    res = self.on_profile_switch(target_profile)
+                                    if res is False:
+                                        switched = False
+                                if switched:
+                                    logger.info(f"Auto-switching: {current_process} -> {target_profile}")
+                                    self.current_auto_profile = target_profile
                         elif self.current_auto_profile:
                             if self.last_manual_profile and self.last_manual_profile != self.current_auto_profile:
                                 logger.info(f"Reverting to manual profile: {self.last_manual_profile}")
