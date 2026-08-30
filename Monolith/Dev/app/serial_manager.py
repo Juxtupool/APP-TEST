@@ -14,37 +14,31 @@ import win32con
 logger = logging.getLogger(__name__)
 
 class SerialListener(threading.Thread):
-    def __init__(self, ser, lock, on_message, on_disconnect):
+    def __init__(self, ser, on_message, on_disconnect):
         super().__init__()
         self.ser = ser
-        self.lock = lock
         self.on_message = on_message
         self.on_disconnect = on_disconnect
         self.running = True
         self.daemon = True
 
     def run(self):
-        consecutive_errors = 0
         while self.running:
             try:
-                with self.lock:
-                    if not self.ser or not self.ser.is_open:
-                        break
-                    line = self.ser.readline().decode('utf-8', errors='ignore').strip()
-                
-                consecutive_errors = 0
+                ser = self.ser
+                if not ser or not ser.is_open:
+                    break
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
                 if line and self.on_message:
                     self.on_message(line)
             except (serial.SerialException, OSError, Exception) as e:
-                consecutive_errors += 1
                 logger.warning(f"Error in serial listener: {e}")
-                if consecutive_errors >= 2 or not (self.ser and self.ser.is_open):
-                    self.running = False
-                    if self.on_disconnect:
-                        self.on_disconnect()
-                    break
+                self.running = False
+                if self.on_disconnect:
+                    self.on_disconnect()
+                break
             
-            time.sleep(0.01)
+            time.sleep(0.005)
 
     def stop(self):
         self.running = False
@@ -60,7 +54,7 @@ class SerialService:
         
         self._port_cache = None
         self._port_cache_time = 0
-        self._port_cache_duration = 2.0
+        self._port_cache_duration = 0.5
         self._last_connected_port = None
 
     @property
@@ -69,29 +63,24 @@ class SerialService:
             return self.ser is not None and self.ser.is_open
 
     def check_physical_connection_health(self):
-        if not self.port or not self.ser or not self.ser.is_open:
-            return False
+        with self.lock:
+            if not self.port or not self.ser or not self.ser.is_open:
+                return False
+            ser = self.ser
+            port = self.port
             
         try:
             available_ports = [p.device for p in serial.tools.list_ports.comports()]
-            if self.port not in available_ports:
-                logger.warning(f"Physical port {self.port} no longer available")
-                last_port = self.port
-                self.disconnect()
-                self._last_connected_port = last_port
+            if port not in available_ports:
+                logger.warning(f"Physical port {port} no longer available")
                 self.on_connection_lost()
                 return False
             
             # Verify the OS serial handle is active (catches handle death post PC sleep/wake)
-            with self.lock:
-                _ = self.ser.in_waiting
-                self.ser.flush()
+            _ = ser.in_waiting
             return True
         except Exception as e:
             logger.warning(f"Serial handle health check failed (post PC sleep/wake): {e}")
-            last_port = self.port
-            self.disconnect()
-            self._last_connected_port = last_port
             self.on_connection_lost()
             return False
 
@@ -151,7 +140,6 @@ class SerialService:
                 self._last_connected_port = port
                 self.listener = SerialListener(
                     self.ser, 
-                    self.lock, 
                     self.on_message_received, 
                     self.on_connection_lost
                 )
@@ -166,6 +154,8 @@ class SerialService:
                 return True
             except Exception as e:
                 logger.error(f"Failed to connect to {port}: {e}")
+                self.ser = None
+                self.port = None
                 return False
 
     def disconnect(self):
@@ -212,14 +202,20 @@ class SerialService:
             self.on_message_callback(message)
 
     def on_connection_lost(self):
-        last_port = self.port
-        if self.ser:
-            try:
-                self.ser.close()
-            except Exception:
-                pass
-            self.ser = None
-        self.port = None
+        if self.listener:
+            self.listener.stop()
+            self.listener = None
+
+        last_port = self.port or self._last_connected_port
+        with self.lock:
+            if self.ser:
+                try:
+                    self.ser.close()
+                except Exception:
+                    pass
+                self.ser = None
+            self.port = None
+
         if last_port:
             self._last_connected_port = last_port
         if self.on_connection_lost_callback:

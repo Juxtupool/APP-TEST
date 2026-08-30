@@ -345,19 +345,16 @@ class TrayManager:
             os._exit(1)
 
     def monitor_loop(self):
-        previous_ports = set()
         first_run = True
         
         while getattr(self.api, 'tray_loop_running', True):
             try:
                 connected = self.api.is_connected()
-                ports = self.api.get_serial_ports()
-                current_ports = {p[0] for p in ports}
-                new_ports = current_ports - previous_ports
-                previous_ports = current_ports
                 
                 if not connected:
                     if not first_run:
+                        ports = self.api.get_serial_ports()
+                        current_ports = {p[0] for p in ports}
                         last_port = self.api._serial_service._last_connected_port
                         autoconnect_port = None
                         
@@ -365,10 +362,10 @@ class TrayManager:
                             autoconnect_port = last_port
                             logger.info(f"Tray Monitor: Active port {last_port} available. Attempting auto-reconnect.")
                         else:
-                            monolith = next((p for p in ports if p[0] in new_ports and any(s in (p[1] + str(p[2] if len(p) > 2 else '')).lower() for s in ['monolith', '2e8a:0002', '2e8a:0003', '1209:c550', '239a:cafe', '239a'])), None)
+                            monolith = next((p for p in ports if any(s in (p[1] + str(p[2] if len(p) > 2 else '')).lower() for s in ['monolith', '2e8a:0002', '2e8a:0003', '1209:c550', '239a:cafe', '239a'])), None)
                             if monolith:
                                 autoconnect_port = monolith[0]
-                                logger.info(f"Tray Monitor: Found NEW device on {monolith[0]}, attempting auto-connect")
+                                logger.info(f"Tray Monitor: Found device on {monolith[0]}, attempting auto-connect")
                                 
                         if autoconnect_port:
                             self.api.connect_serial(autoconnect_port)
@@ -380,7 +377,7 @@ class TrayManager:
                 first_run = False
             except Exception as e:
                 logger.error(f"Error in tray loop: {e}")
-            time.sleep(2)
+            time.sleep(1.5)
 
 def setup_power_event_listener(api):
     def wnd_proc(hwnd, msg, wparam, lparam):
@@ -394,11 +391,16 @@ def setup_power_event_listener(api):
             elif wparam in (0x0012, 0x0007): # PBT_APMRESUMEAUTOMATIC, PBT_APMRESUMESUSPEND
                 logger.info("System Power Broadcast: Wake event (PBT_APMRESUME) - auto-reconnecting serial")
                 def delayed_reconnect():
-                    time.sleep(1.2)
-                    last_port = api._serial_service._last_connected_port
-                    if last_port:
-                        logger.info(f"Power event resume: Reconnecting serial to {last_port}")
-                        api.connect_serial(last_port)
+                    for delay in (1.0, 2.0, 3.5):
+                        time.sleep(delay)
+                        if api.is_connected():
+                            break
+                        last_port = api._serial_service._last_connected_port
+                        if last_port:
+                            logger.info(f"Power event resume: Reconnecting serial to {last_port}")
+                            res = api.connect_serial(last_port)
+                            if res and res.get("status") == "success":
+                                break
                 threading.Thread(target=delayed_reconnect, daemon=True).start()
         return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
