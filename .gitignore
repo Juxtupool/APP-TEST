@@ -27,4 +27,10 @@ desktop.ini
 # Scratch & Temporary
 scratch/
 
-
+# Local Docs, Reports & CAD
+*.pdf
+*.docx
+*.f3z
+deploy_pocketbase.sh
+POCKETBASE_DEPLOYMENT_GUIDE.md
+generate_*.py
