@@ -279,7 +279,7 @@ def create_readme():
 
 - Windows 10/11 (64-bit)
 - .NET Framework 4.7.2 or higher
-- USB port for NodeMCU device
+- USB port for RP2040 / MacroPad device
 - Internet connection (first run only, for WebView2)
 
 ## Troubleshooting

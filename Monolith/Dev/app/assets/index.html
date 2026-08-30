@@ -5,11 +5,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OVERCONTROL</title>
+    <link rel="stylesheet" href="css/fonts.css">
     <link rel="stylesheet" href="css/all.min.css">
     <link rel="stylesheet" href="css/style.css?v=5">
     <link rel="stylesheet" href="css/community.css">
     <link rel="stylesheet" href="css/submit-modal.css">
     <link rel="stylesheet" href="css/update-status-modal.css">
+    <script>
+        (function() {
+            var errorQueue = [];
+            function sendError(errorData) {
+                if (window.pywebview && window.pywebview.api && window.pywebview.api.log_ui_error) {
+                    window.pywebview.api.log_ui_error(errorData).catch(function() {});
+                } else {
+                    errorQueue.push(errorData);
+                }
+            }
+            window.addEventListener('pywebviewready', function() {
+                while (errorQueue.length > 0) {
+                    var item = errorQueue.shift();
+                    if (window.pywebview && window.pywebview.api && window.pywebview.api.log_ui_error) {
+                        window.pywebview.api.log_ui_error(item).catch(function() {});
+                    }
+                }
+            });
+            window.onerror = function(message, source, lineno, colno, error) {
+                sendError({
+                    error_type: (error && error.name) ? error.name : 'JavaScriptError',
+                    message: String(message),
+                    source: String(source || window.location.href),
+                    line: lineno || 0,
+                    column: colno || 0,
+                    stack: (error && error.stack) ? error.stack : ''
+                });
+            };
+            window.addEventListener('unhandledrejection', function(event) {
+                var reason = event.reason;
+                sendError({
+                    error_type: 'UnhandledPromiseRejection',
+                    message: (reason && reason.message) ? reason.message : String(reason),
+                    source: window.location.href,
+                    line: 0,
+                    column: 0,
+                    stack: (reason && reason.stack) ? reason.stack : String(reason)
+                });
+            });
+        })();
+    </script>
 </head>
 
 <body>
@@ -184,6 +226,7 @@
                                     <select id="knob-mode-select" style="display: none;">
                                         <option value="Custom">Custom</option>
                                         <option value="Standard">Volume</option>
+                                        <option value="Horizontal Scroll">Horizontal Scroll</option>
                                         <option value="Timeline Scrubber">Timeline Scrubber</option>
                                         <option value="App Switcher (Alt+Tab)">App Switcher</option>
                                         <option value="Window Switcher (Alt+Esc)">Window Switcher</option>
@@ -200,6 +243,7 @@
                                             <div class="dropdown-item active" data-value="Custom">Custom</div>
                                             <div class="dropdown-separator"></div>
                                             <div class="dropdown-item" data-value="Standard">Volume</div>
+                                            <div class="dropdown-item" data-value="Horizontal Scroll">Horizontal Scroll</div>
                                             <div class="dropdown-item" data-value="Timeline Scrubber">Timeline
                                                 Scrubber
                                             </div>
@@ -464,33 +508,33 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Macro Name & Icon</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <button id="btn-macro-icon" class="icon-selector-btn" title="Select Icon">
+                    <label for="macro-name-input">Macro Name & Icon</label>
+                    <div class="input-with-button">
+                        <button id="btn-macro-icon" class="icon-selector-btn" title="Select Icon" type="button">
                             <i class="fa-solid fa-bolt"></i>
                         </button>
-                        <input type="text" id="macro-name-input" placeholder="e.g., Copy Text" style="flex: 1;">
+                        <input type="text" id="macro-name-input" class="form-input" placeholder="e.g., Copy Text">
                     </div>
                 </div>
 
                 <div class="modal-tabs">
-                    <button class="modal-tab active" data-tab="keystrokes">Keystrokes</button>
-                    <button class="modal-tab" data-tab="text">Text / Paragraph</button>
-                    <button class="modal-tab" data-tab="launch">Launch App/File</button>
-                    <button class="modal-tab" data-tab="command">Command</button>
+                    <button class="modal-tab active" data-tab="keystrokes" type="button">Keystrokes</button>
+                    <button class="modal-tab" data-tab="text" type="button">Text / Paragraph</button>
+                    <button class="modal-tab" data-tab="launch" type="button">Launch App/File</button>
+                    <button class="modal-tab" data-tab="command" type="button">Command</button>
                 </div>
 
                 <!-- Keystrokes Tab -->
                 <div class="modal-tab-content active" id="modal-tab-keystrokes">
                     <div class="recorder-section">
                         <div class="recorder-controls">
-                            <button id="btn-record-toggle" class="btn-secondary">
+                            <button id="btn-record-toggle" class="btn-secondary" type="button">
                                 <i class="fa-solid fa-circle"></i> Start Recording
                             </button>
-                            <button id="btn-clear-macro" class="btn-secondary" title="Clear">
+                            <button id="btn-clear-macro" class="btn-secondary" title="Clear" type="button">
                                 <i class="fa-solid fa-eraser"></i>
                             </button>
-                            <button id="btn-add-delay" class="btn-secondary" title="Add Delay">
+                            <button id="btn-add-delay" class="btn-secondary" title="Add Delay" type="button">
                                 <i class="fa-solid fa-clock"></i> Add Delay
                             </button>
                         </div>
@@ -503,21 +547,31 @@
                 <!-- Text Tab -->
                 <div class="modal-tab-content" id="modal-tab-text">
                     <div class="form-group">
-                        <label>Enter Text / Paragraph</label>
-                        <textarea id="text-macro-input" rows="6"
-                            placeholder="Type or paste your paragraph here..."
-                            style="width: 100%; padding: 10px; background: #1a1a1a; color: white; border: 1px solid #555; border-radius: 6px; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
-                        <div style="margin-top: 10px; display: flex; align-items: center; gap: 15px;">
-                            <label style="font-size: 0.85rem; color: #aaa;">Input Method:</label>
-                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: white; cursor: pointer; user-select: none;">
-                                <input type="radio" name="text-method" value="paste" checked style="accent-color: var(--accent-color); cursor: pointer;"> Paste (Instant)
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: white; cursor: pointer; user-select: none;">
-                                <input type="radio" name="text-method" value="type" style="accent-color: var(--accent-color); cursor: pointer;"> Type Out (Slow)
-                            </label>
+                        <label for="text-macro-input">Enter Text / Paragraph</label>
+                        <textarea id="text-macro-input" class="form-input text-macro-area" rows="6"
+                            placeholder="Type or paste your paragraph here..."></textarea>
+                        
+                        <div class="input-method-section">
+                            <span class="input-method-title">Input Method</span>
+                            <div class="segmented-control">
+                                <label class="segmented-option">
+                                    <input type="radio" name="text-method" value="paste" checked>
+                                    <span class="segmented-btn">
+                                        <i class="fa-solid fa-bolt"></i>
+                                        <span>Paste (Instant)</span>
+                                    </span>
+                                </label>
+                                <label class="segmented-option">
+                                    <input type="radio" name="text-method" value="type">
+                                    <span class="segmented-btn">
+                                        <i class="fa-solid fa-keyboard"></i>
+                                        <span>Type Out (Slow)</span>
+                                    </span>
+                                </label>
+                            </div>
                         </div>
-                        <p style="font-size: 0.8rem; color: #888; margin-top: 8px;">
-                            Paste method temporarily uses the system clipboard to output text instantly.
+                        <p class="form-helper-text">
+                            <i class="fa-solid fa-circle-info"></i> Paste method temporarily uses the system clipboard to output text instantly.
                         </p>
                     </div>
                 </div>
@@ -525,15 +579,16 @@
                 <!-- Launch Tab -->
                 <div class="modal-tab-content" id="modal-tab-launch">
                     <div class="form-group">
-                        <label>Application / File Path / URL</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="launch-path-input"
-                                placeholder="e.g. C:\Windows\notepad.exe or https://google.com" style="flex: 1;">
-                            <button id="btn-browse-file" class="btn-secondary"><i
-                                    class="fa-solid fa-folder-open"></i></button>
+                        <label for="launch-path-input">Application / File Path / URL</label>
+                        <div class="input-with-button">
+                            <input type="text" id="launch-path-input" class="form-input"
+                                placeholder="e.g. C:\Windows\notepad.exe or https://google.com">
+                            <button id="btn-browse-file" class="btn-secondary" title="Browse Files" type="button">
+                                <i class="fa-solid fa-folder-open"></i> Browse
+                            </button>
                         </div>
-                        <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">
-                            Enter a full file path, or a URL starting with http:// or https://
+                        <p class="form-helper-text">
+                            <i class="fa-solid fa-circle-info"></i> Enter a full file path, application path, or URL (http:// or https://)
                         </p>
                     </div>
                 </div>
@@ -541,12 +596,12 @@
                 <!-- Command Tab -->
                 <div class="modal-tab-content" id="modal-tab-command">
                     <div class="form-group">
-                        <label>Shell Command / Script</label>
-                        <textarea id="command-input" rows="5"
+                        <label for="command-input">Shell Command / Script</label>
+                        <textarea id="command-input" class="form-input code-input" rows="5"
                             placeholder="e.g. echo 'Hello' > test.txt&#10;python script.py"
-                            style="width: 100%; padding: 10px; background: #1a1a1a; color: white; border: 1px solid #555; border-radius: 6px; font-family: monospace; resize: vertical; box-sizing: border-box;"></textarea>
-                        <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">
-                            Executes in system shell. Use with caution.
+                            spellcheck="false"></textarea>
+                        <p class="form-helper-text form-helper-warning">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Executes directly in system shell. Use with caution.
                         </p>
                     </div>
                 </div>
@@ -554,11 +609,13 @@
                 <!-- Icon Browser (Hidden by default) -->
                 <div id="icon-browser-container" style="display: none;">
                     <div class="icon-browser-header">
-                        <button class="btn-secondary" id="btn-back-to-editor"><i class="fa-solid fa-arrow-left"></i>
-                            Back</button>
-                        <div class="icon-search-wrapper" style="flex: 1; margin-left: 10px;">
-                            <input type="text" id="icon-search-input" placeholder="Search icons..."
-                                style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box;">
+                        <button class="btn-secondary" id="btn-back-to-editor" type="button">
+                            <i class="fa-solid fa-arrow-left"></i> Back
+                        </button>
+                        <div class="icon-search-wrapper">
+                            <i class="fa-solid fa-magnifying-glass icon-search-icon"></i>
+                            <input type="text" id="icon-search-input" class="form-input icon-search-input-field"
+                                placeholder="Search icons...">
                         </div>
                     </div>
                     <div class="icon-browser-content">

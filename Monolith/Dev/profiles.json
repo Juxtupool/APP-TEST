@@ -5,8 +5,9 @@
                 "Spotify": {
                     "name": "Spotify",
                     "icon": "icons/Logos/spotify-fill.svg",
-                    "type": "command",
-                    "command": "spicetify auto"
+                    "toggle": false,
+                    "type": "launch",
+                    "path": "C:\\Users\\pulak\\AppData\\Roaming\\Spotify\\Spotify.exe"
                 },
                 "Antigravity": {
                     "icon": "icons/Logos/gemini-fill.svg",
@@ -16,11 +17,18 @@
                     "origin": "community"
                 },
                 "Notepad": {
-                    "icon": "icons/Document/sticky-note-fill.svg",
                     "name": "Notepad",
-                    "path": "C:\\Windows\\notepad.exe",
+                    "icon": "icons/Document/sticky-note-fill.svg",
+                    "toggle": true,
                     "type": "launch",
-                    "origin": "community"
+                    "path": "C:\\Windows\\notepad.exe"
+                },
+                "Cope": {
+                    "name": "Cope",
+                    "toggle": false,
+                    "type": "text",
+                    "text": "Hey this is Pulak the Dev",
+                    "method": "type"
                 }
             },
             "keys": {
@@ -28,6 +36,7 @@
                 "2": "Previous Track",
                 "3": "Spotify",
                 "4": "Play/Pause",
+                "5": "Mute",
                 "6": "Next Track"
             },
             "knobs": {},
@@ -43,13 +52,15 @@
                 "6": "Next Track"
             },
             "knobs": {},
-            "linked_apps": []
+            "linked_apps": [],
+            "knob_mode": "Horizontal Scroll"
         }
     },
-    "active_profile": "Default Profile",
+    "active_profile": "Desktop",
     "minimize_to_tray": false,
     "accent_color": "#0091ff",
     "saved_colors": [
-        "#ff0000"
-    ]
+        "#a6a6a6"
+    ],
+    "ui_theme": "cyber-slate"
 }

@@ -23,6 +23,7 @@ import win32gui
 import win32ui
 from PIL import Image
 from packaging import version as pkg_version
+from pynput.mouse import Button
 import psutil
 import webview
 import winreg
@@ -37,6 +38,7 @@ from .macro_manager import (
     ProfileSwitcherService
 )
 from .version import APP_VERSION
+from .crash_reporter import crash_reporter
 
 logger = logging.getLogger(__name__)
 
@@ -1014,6 +1016,8 @@ class Api:
         self._app_root = APP_ROOT
         self._webview = webview
         self._config = self._load_config()
+        if 'pocketbase' in self._config and 'url' in self._config['pocketbase']:
+            crash_reporter.set_pb_url(self._config['pocketbase']['url'])
         
         # Initialize simplified services
         self._profile_service = ProfileService(PROFILE_PATH)
@@ -1172,6 +1176,35 @@ class Api:
             return {"status": "success", "icon": icon_data}
         else:
             return {"status": "error", "message": "Icon not found"}
+
+    @safe_api
+    def log_ui_error(self, error_data: Dict):
+        """Receive frontend JS crash or unhandled rejection and forward to crash reporter."""
+        try:
+            msg = error_data.get("message", "Unknown UI error")
+            source = error_data.get("source", "webview_js")
+            line = error_data.get("line", 0)
+            col = error_data.get("column", 0)
+            stack = error_data.get("stack") or f"at {source}:{line}:{col}"
+            err_type = error_data.get("error_type", "JavaScriptError")
+            
+            logger.error(f"Frontend UI Error: {msg} ({source}:{line}:{col})\n{stack}")
+            crash_reporter.report_error(
+                error_type=err_type,
+                error_message=str(msg),
+                stack_trace=str(stack),
+                source="frontend_ui",
+                metadata={
+                    "url": source,
+                    "line": line,
+                    "column": col,
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                }
+            )
+            return {"status": "success"}
+        except Exception as e:
+            logger.error(f"Error handling log_ui_error: {e}")
+            return {"status": "error", "message": str(e)}
 
     # --- ProfileMixin Endpoints ---
     @safe_api
@@ -1934,6 +1967,13 @@ class Api:
                 self._macro_execution_service.execute_macro({"type": "key", "sequence": ["volup"]})
             elif command == "KNOB_PRESS":
                 self._macro_execution_service.execute_macro({"type": "key", "sequence": ["volumemute"]})
+        elif current_mode == "Horizontal Scroll":
+            if command == "KNOB_LEFT":
+                self._macro_execution_service.mouse.scroll(-1, 0)
+            elif command == "KNOB_RIGHT":
+                self._macro_execution_service.mouse.scroll(1, 0)
+            elif command == "KNOB_PRESS":
+                self._macro_execution_service.mouse.click(Button.middle)
         elif current_mode in ["Custom", "Timeline Scrubber"]:
             if command == "KNOB_LEFT":
                 macro_name = profile_data.get("knobs", {}).get("knob_rotate_left")

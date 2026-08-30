@@ -18,6 +18,10 @@ import winerror
 
 # Import our custom consolidated services/utils
 from .api import Api, get_ui_bridge
+from .crash_reporter import init_crash_reporter, crash_reporter
+
+# Initialize global crash reporting hooks immediately
+init_crash_reporter()
 
 logger = logging.getLogger(__name__)
 _app_mutex = None

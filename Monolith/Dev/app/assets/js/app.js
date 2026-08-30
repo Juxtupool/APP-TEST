@@ -634,6 +634,13 @@ function updateUIForProfile() {
             document.querySelector('.knob-action-card[data-action="knob_rotate_right"] .assigned-macro').innerText = "Volume Up";
             document.querySelector('.knob-action-card[data-action="knob_press"] .assigned-macro').innerText = "Mute";
 
+        } else if (knobMode === "Horizontal Scroll") {
+            modeDesc.innerText = "Horizontal Scroll: Pan left/right across timelines, spreadsheets, and wide canvases.";
+
+            document.querySelector('.knob-action-card[data-action="knob_rotate_left"] .assigned-macro').innerText = "Scroll Left";
+            document.querySelector('.knob-action-card[data-action="knob_rotate_right"] .assigned-macro').innerText = "Scroll Right";
+            document.querySelector('.knob-action-card[data-action="knob_press"] .assigned-macro').innerText = "Middle Click";
+
         } else if (knobMode.includes("Alt+Tab")) {
             modeDesc.innerText = "App Switcher: Rotate to navigate apps, stop to select.";
 

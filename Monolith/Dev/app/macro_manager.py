@@ -13,6 +13,7 @@ from pathlib import Path
 from pynput import keyboard
 from pynput.keyboard import Controller as KeyboardController, Key, KeyCode
 from pynput.mouse import Controller as MouseController, Button
+from typing import Optional, List, Dict, Any, Union
 import win32gui
 import win32process
 import win32con
@@ -93,7 +94,7 @@ class KnobController:
             self.speed = 1
 
     def handle_input(self, command):
-        if self.mode in ["Standard", "Custom", "Timeline Scrubber"]:
+        if self.mode in ["Standard", "Custom", "Timeline Scrubber", "Horizontal Scroll"]:
             if self.on_standard_execution:
                 for i in range(self.speed):
                     self.on_standard_execution(command)
